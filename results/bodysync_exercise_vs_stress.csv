@@ -1,0 +1,13 @@
+label,mean,median,size,dataset,version
+aerobic,20.9,14.2,1249,stressexercise,v1 any change
+anaerobic,25.3,16.2,527,stressexercise,v1 any change
+baseline,69.3,74.3,277,stressexercise,v1 any change
+recovery,28.5,26.0,65,stressexercise,v1 any change
+rest,38.1,34.4,1073,stressexercise,v1 any change
+stress,34.8,31.5,183,stressexercise,v1 any change
+aerobic,25.0,16.8,1249,stressexercise,v2 stress direction
+anaerobic,28.1,17.4,527,stressexercise,v2 stress direction
+baseline,81.9,83.7,277,stressexercise,v2 stress direction
+recovery,29.7,26.9,65,stressexercise,v2 stress direction
+rest,58.9,60.6,1073,stressexercise,v2 stress direction
+stress,48.0,44.5,183,stressexercise,v2 stress direction

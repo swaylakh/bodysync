@@ -1,0 +1,3 @@
+test,frozen_v2_auc,frozen_v2_people_above_0.5,people,logistic_auc,logistic_people_above_0.5,xgboost_auc,xgboost_people_above_0.5
+FAIR: felt stress vs flagged-but-not-stressed,0.5151119383336291,6,11,0.5349703147603683,6,0.532845569476003,6
+stress vs calm (inflated: intervals picked by an EDA detector),0.5972265221440233,13,15,0.5966784991156756,11,0.6070917619706436,13

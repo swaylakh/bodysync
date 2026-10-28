@@ -1,0 +1,4 @@
+,median_transition,median_clean,p,n_transition,median_wrong,median_right,n_wrong,rho
+transition_vs_clean,0.80497753586507,0.7483662021764242,4.958714528078699e-36,6944.0,,,,
+misclassified_vs_correct,,,0.09200686790791271,,0.7577134477618491,0.745733463017912,1563.0,
+desync_vs_level_deviation_spearman,,,6.086824244721203e-47,,,,,0.11684966041915346

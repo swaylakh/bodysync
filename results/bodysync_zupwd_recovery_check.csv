@@ -1,0 +1,5 @@
+score,marker,expected_sign,nights,n_people,within_person_rho,p_value,people_in_expected_direction,p_people
+full score,HRV (RMSSD),+,301,12,0.07845459945875781,0.17460131779608415,6,0.9697265625
+full score,breathing rate,-,301,12,-0.13054691323908305,0.023501468468267537,8,0.65625
+score without HR,HRV (RMSSD),+,301,12,0.040860267100833875,0.480036058504605,6,1.0
+score without HR,breathing rate,-,301,12,0.010134749867422873,0.860997726680105,7,0.8515625

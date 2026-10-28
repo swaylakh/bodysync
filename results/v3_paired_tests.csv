@@ -1,0 +1,17 @@
+task,method,vs,n_people,median_diff,people_improved,p_value
+3-class,+ pearson r,none (levels+personal),20,0.0,9,0.28597919066405664
+3-class,+ change r,none (levels+personal),20,0.0,9,0.2667689558251569
+3-class,+ spearman r,none (levels+personal),20,0.0,9,0.43475617175843206
+3-class,+ lagged r,none (levels+personal),20,0.0036058263218728404,12,0.06267138786896245
+3-class,+ personal coupling,none (levels+personal),20,0.007533949466329848,11,0.13297131332886625
+3-class,+ sync strength,none (levels+personal),20,0.0,9,0.9433920568226559
+3-class,+ all coupling,none (levels+personal),20,0.00867979325194379,11,0.20967491728457333
+3-class,nested,none (levels+personal),20,0.010195873768846453,11,0.3957522466577532
+sleep-vs-rest,+ pearson r,none (levels+personal),18,0.004826104985064972,13,0.13372989286451814
+sleep-vs-rest,+ change r,none (levels+personal),18,-7.734849363810747e-05,7,0.836138661741041
+sleep-vs-rest,+ spearman r,none (levels+personal),18,0.006895377128953717,11,0.07873081119613402
+sleep-vs-rest,+ lagged r,none (levels+personal),18,0.0012176045378307632,10,0.3811632511856291
+sleep-vs-rest,+ personal coupling,none (levels+personal),18,0.006689995912095903,11,0.3132195064700367
+sleep-vs-rest,+ sync strength,none (levels+personal),18,0.007210782430528917,11,0.13372989286451814
+sleep-vs-rest,+ all coupling,none (levels+personal),18,0.004474468739378845,10,0.21460188629190957
+sleep-vs-rest,nested,none (levels+personal),18,0.006689995912095903,11,0.06914397389751895

@@ -1,0 +1,7 @@
+task,picked,folds
+3-class,+ all coupling,12
+sleep-vs-rest,+ personal coupling,11
+3-class,+ personal coupling,6
+sleep-vs-rest,+ all coupling,5
+3-class,+ sync strength,3
+sleep-vs-rest,+ sync strength,3
