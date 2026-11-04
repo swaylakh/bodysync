@@ -11,16 +11,12 @@
 
 \graphicspath{{figures/}{./}}
 
-\title{HealthMonitoring}
-\author{Manideepa Mukherjee Bhakat}
-\date{October 2026}
+\title{BodySync: A Personal-Normal Score from Wrist Physiology,\\Tested on Eight Empatica Datasets}
+\author{Swayam Lakhotia \and Bhavya Bajaj \and Ananya Khaitan}
+\date{November 2026}
 
 \begin{document}
 \maketitle
-
-\begin{center}
-{\Large\textbf{BodySync: A Personal-Normal Score from Wrist Physiology, Tested on Eight Empatica Datasets}}
-\end{center}
 
 \begin{abstract}
 Wrist wearables record heart rate, electrodermal activity (EDA) and skin temperature continuously, but turning these signals into a meaningful everyday score remains difficult. We compared two candidate scores on the same data. Score~A (\emph{sync}) measures whether the three signals move together the way they usually do for a person. Score~B (\emph{BodySync}) measures how far their levels are from the person's own normal for the same situation, counting only changes in the stress direction. Both were built on ZU-PWD~'25, a free-living Empatica EmbracePlus dataset (27 people, 901{,}440 minutes), and evaluated on seven public Empatica E4 stress datasets. Coupling features were close to chance at telling sleep, rest and activity apart (balanced accuracy 0.37 vs.\ 0.81 for signal levels). Across the stress datasets the sync score did not separate stress from calm in any fair test (within-person AUC 0.46--0.52). BodySync separated acute laboratory stress on WESAD (AUC 0.78, 12 of 15 people) and weakly on a second laboratory dataset (AUC 0.60), but was at chance on all three everyday-life datasets. Signal levels relative to a personal normal therefore carry more information than signal coupling. Neither score detects everyday stress from one-minute or five-minute wrist summaries.
