@@ -123,7 +123,7 @@ Each loader's docstring explains its file layout and labelling rules. They all w
 src/            pipeline; src/datasets/ has one loader per external dataset
 results/        result tables
 figures/        fig1 typical day, fig2 coupling by state, fig3 example week, fig4 all datasets, fig5 sync vs BodySync
-report/         LaTeX report (main.tex, refs.bib); overleaf.tex is the same report as one file
-docs/           paper summary, related work, slides (plan + results decks)
+report/         LaTeX report (main.tex, refs.bib); overleaf.tex = full report as one file, overleaf_update.tex = shorter lab-only progress report
+docs/           paper summary, related work, slides (plan deck, full results deck, shorter update deck)
 data/           datasets (not in git)
 ```
