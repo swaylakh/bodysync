@@ -67,6 +67,25 @@ AUC = how well a lower score picks out a person's stress windows from their calm
 ![all datasets](figures/fig4_all_datasets.png)
 ![sync vs BodySync](figures/fig5_sync_vs_bodysync.png)
 
+### Richer features on the lab datasets
+
+`src/feature_test.py`, `results/feature_test.csv`, with the features computed in `src/datasets/richer.py`. The variants were fixed before looking at the results:
+- **Sweat bursts:** skin conductance responses, measured as rate and size, from the raw 4 Hz EDA.
+- **HRV:** RMSSD from inter-beat intervals.
+- **A trained XGBoost model** on the same distance-from-normal inputs.
+
+| Lab dataset | B | B + sweat bursts | B + bursts + HRV | Trained, new people (LOSO) | Trained, unseen dataset |
+|---|---|---|---|---|---|
+| WESAD | 0.78 | 0.87 | 0.87 | 0.98 | **0.96** |
+| Stress + exercise | 0.60 | 0.61 | 0.64 | 0.71 | **0.69** |
+| Stress-Predict | 0.54 | 0.56 | 0.56 | 0.71 | **0.67** |
+| EmpaticaE4Stress† | 0.92 | 0.98 | 0.99 | 1.00 | 0.95 |
+
+- **Sweat bursts give the biggest single gain on WESAD.**
+- **HRV adds little.** Wrist-pulse HRV is noisy; on WESAD it even rises under stress, which is likely movement noise.
+- **The trained model holds up on a dataset it never saw** (leave-one-dataset-out across the 4 lab sets).
+- **Not yet tested on the everyday-life datasets.**
+
 ### Conclusion
 
 - **The sync score (A) is at chance on every fair test,** including WESAD.
@@ -98,6 +117,7 @@ python src/run_all.py              # ZU-PWD pipeline + scoring of all converted 
 | The score | `src/bodysync.py` |
 | Score on ZU-PWD: exercise and sleep checks, fig 3 | `src/validate_zupwd.py` |
 | Both scores on all external datasets, figs 4–5 | `src/validate_datasets.py` |
+| Sweat bursts, HRV and a trained model on the lab datasets | `src/feature_test.py` |
 | Report tables + single-file Overleaf version | `report/make_tables.py` (after compiling `report/main.tex`) |
 
 ### Getting the data

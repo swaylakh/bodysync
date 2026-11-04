@@ -60,7 +60,7 @@ def evaluate(name: str, s: pd.DataFrame, setting: str, col: str) -> dict:
     aucs = s[s.pid.isin(per.index)].groupby("pid").apply(
         lambda g: roc_auc_score(g.stress, -g[col]), include_groups=False)
     reasons = s[s.stress][f"{col}_reason"].value_counts(normalize=True)
-    return {"score": SCORES[col], "dataset": name, "setting": setting, "comparison": comparison, "n_people": len(per),
+    return {"score": SCORES.get(col, col), "dataset": name, "setting": setting, "comparison": comparison, "n_people": len(per),
             "score_calm": per[False].mean(), "score_stress": per[True].mean(),
             "people_lower_in_stress": int((per[True] < per[False]).sum()),
             "p_value": wilcoxon(per[True], per[False]).pvalue if len(per) >= 6 else np.nan,

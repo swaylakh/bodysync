@@ -46,12 +46,17 @@ Windows: 2 min sliding by 30 s on a grid from the recording start, 1-s
 resolution; a window gets a phase's label if >= 90% of its seconds lie in that
 phase, otherwise it is dropped. `start` is naive UTC.
 r_hr_eda / r_hr_temp / r_eda_temp = Pearson r of the per-second series inside the window.
+scr_rate / scr_amp / rmssd_ms = richer.eda_bursts on the raw 4 Hz EDA samples in the window
+and richer.rmssd on the IBI.csv beats in the window (IBI without header: times from recording start).
 """
 import os
 import sys
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from richer import eda_bursts, rmssd  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(ROOT, "data", "external", "e4stress", "Subjects")
@@ -92,6 +97,20 @@ def read_e4(path, kind):
     return None, x
 
 
+def read_ibi(path, t0):
+    """IBI.csv -> (beat times in s from recording start, IBI in s); header may be stripped."""
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        return np.array([]), np.array([])
+    x = pd.read_csv(path, header=None, skipinitialspace=True, dtype=str)
+    off = 0.0
+    if str(x.iloc[0, 1]).strip() == "IBI":
+        t_ibi = float(x.iloc[0, 0])
+        off = t_ibi - t0 if t0 is not None else 0.0
+        x = x.iloc[1:]
+    x = x.to_numpy(dtype=float)
+    return off + x[:, 0], x[:, 1]
+
+
 def per_second(x, fs, offset, lo=None, hi=None, mag=False):
     """Mean / SD per relative second -> DataFrame indexed by second."""
     if mag:
@@ -129,6 +148,10 @@ def subject(d):
     t0 = t_temp if t_temp is not None else t_acc
     if t_acc is not None and t0 is not None:
         assert t_acc == t0
+    b_time, b_ibi = read_ibi(os.path.join(SRC, d, "IBI.csv"), t0)
+    e_raw = eda[:, 0].copy()
+    e_raw[e_raw < 0] = np.nan
+    e_time = np.arange(len(e_raw)) / 4.0
     hr_off = (t_hr - t0) if (t_hr is not None and t0 is not None) else HR_DELAY
 
     sig = {
@@ -171,6 +194,7 @@ def subject(d):
         move = np.sqrt(max(tot[1] / tot[2] - (tot[0] / tot[2]) ** 2, 0)) if tot[2] else np.nan
         for x, y in (("hr", "eda"), ("hr", "temp"), ("eda", "temp")):
             out[f"r_{x}_{y}"] = corr(sec[x][sl], sec[y][sl], WIN)
+        scr_rate, scr_amp = eda_bursts(e_raw[(e_time >= s) & (e_time < s + WIN)], 4)
         rows.append({
             "pid": f"{NAME}_{sid}",
             "start": pd.to_datetime(t0 + s, unit="s") if t0 is not None else pd.NaT,
@@ -179,6 +203,8 @@ def subject(d):
             "move": move, "coverage": have[sl].mean(),
             "r_hr_eda": out["r_hr_eda"], "r_hr_temp": out["r_hr_temp"], "r_eda_temp": out["r_eda_temp"],
             "t_rel_s": s,
+            "scr_rate": scr_rate, "scr_amp": scr_amp,
+            "rmssd_ms": rmssd(b_ibi[(b_time >= s) & (b_time < s + WIN)]),
         })
     return rows
 

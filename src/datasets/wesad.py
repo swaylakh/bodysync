@@ -9,6 +9,7 @@ Signals are brought to 1 reading per second (EDA/temp 4 Hz, pulse 64 Hz -> heart
 from pulse peaks), then cut into 2-min windows sliding by 30 s, per src/datasets/SPEC.md.
 A window gets a condition if at least 90% of its seconds are in it. normal = baseline.
 r_hr_eda, r_hr_temp, r_eda_temp: Pearson r of the two 1-s series inside each window.
+scr_rate, scr_amp, rmssd_ms: sweat bursts from the raw 4 Hz EDA and HRV from pulse peaks (see richer.py).
 """
 import pickle
 import zipfile
@@ -17,6 +18,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.signal import butter, filtfilt, find_peaks
+
+from richer import eda_bursts, rmssd
 
 ROOT = Path(__file__).resolve().parents[2]
 ZIP = ROOT / "data" / "wesad" / "WESAD.zip"
@@ -41,7 +44,8 @@ def per_second(x: np.ndarray, hz: int, n_sec: int) -> np.ndarray:
     return x[: n_sec * hz].reshape(n_sec, hz, *x.shape[1:]).mean(axis=1)
 
 
-def load_subject(zf: zipfile.ZipFile, member: str) -> pd.DataFrame:
+def load_subject(zf: zipfile.ZipFile, member: str) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
+    """Per-second signals, plus the raw 4 Hz EDA and the beat times (s) for the richer features."""
     with zf.open(member) as f:
         d = SafeUnpickler(f, encoding="latin1").load()
     wrist = d["signal"]["wrist"]
@@ -57,10 +61,11 @@ def load_subject(zf: zipfile.ZipFile, member: str) -> pd.DataFrame:
 
     mag = np.linalg.norm(acc[: n_sec * ACC_HZ], axis=1).reshape(n_sec, ACC_HZ)
     lab = d["label"][: n_sec * LABEL_HZ].reshape(n_sec, LABEL_HZ)
+    beats = peaks[1:][ok] / BVP_HZ
     return pd.DataFrame({
         "hr": hr_1hz, "eda": per_second(eda, EDA_HZ, n_sec), "temp": per_second(temp, EDA_HZ, n_sec),
         "mag_sd": mag.std(axis=1), "label": [np.bincount(r).argmax() for r in lab],
-    })
+    }), eda, beats
 
 
 def pearson(x: pd.Series, y: pd.Series) -> float:
@@ -70,7 +75,7 @@ def pearson(x: pd.Series, y: pd.Series) -> float:
     return float(np.corrcoef(x[m], y[m])[0, 1])
 
 
-def windows(sig: pd.DataFrame, pid: str) -> pd.DataFrame:
+def windows(sig: pd.DataFrame, eda: np.ndarray, beats: np.ndarray, pid: str) -> pd.DataFrame:
     rows, lab = [], sig.label.to_numpy()
     for start in range(0, len(sig) - WIN + 1, STEP):
         sl = slice(start, start + WIN)
@@ -79,12 +84,16 @@ def windows(sig: pd.DataFrame, pid: str) -> pd.DataFrame:
             continue
         cond = CONDITIONS[vals[counts.argmax()]]
         part = sig.iloc[sl]
+        scr_rate, scr_amp = eda_bursts(eda[start * EDA_HZ:(start + WIN) * EDA_HZ])
+        in_win = (beats >= start) & (beats < start + WIN)
+        ibi = np.diff(beats)[in_win[1:] & in_win[:-1]]
         rows.append({"pid": f"wesad_{pid}", "start": pd.Timestamp(0) + pd.Timedelta(seconds=start),
                      "label": cond, "normal": cond == "baseline", "hr_mean": part.hr.mean(),
                      "eda_mean": part.eda.mean(), "temp_mean": part.temp.mean(),
                      "move": part.mag_sd.mean(), "coverage": 1.0,
                      "r_hr_eda": pearson(part.hr, part.eda), "r_hr_temp": pearson(part.hr, part.temp),
-                     "r_eda_temp": pearson(part.eda, part.temp)})
+                     "r_eda_temp": pearson(part.eda, part.temp),
+                     "scr_rate": scr_rate, "scr_amp": scr_amp, "rmssd_ms": rmssd(ibi)})
     return pd.DataFrame(rows)
 
 
@@ -93,7 +102,7 @@ def main():
     with zipfile.ZipFile(ZIP) as zf:
         for m in sorted(m for m in zf.namelist() if m.endswith(".pkl")):
             pid = Path(m).stem
-            out.append(windows(load_subject(zf, m), pid))
+            out.append(windows(*load_subject(zf, m), pid))
     w = pd.concat(out, ignore_index=True)
     w.to_parquet(OUT, index=False)
     print(f"{w.pid.nunique()} people, {w.label.value_counts().to_dict()}")

@@ -4,7 +4,7 @@
 Source: https://physionet.org/content/wearable-device-dataset/1.0.1/ (files taken
 from the PhysioNet open-data S3 mirror, same paths as the zip), extracted to
 data/external/stressexercise/Wearable_Dataset/{STRESS,AEROBIC,ANAEROBIC}/<id>/.
-BVP.csv / IBI.csv were not downloaded (HR.csv is used).
+BVP.csv was not downloaded (HR.csv is used); IBI.csv was added later from the same mirror.
 
 People. subject-info.csv has ONE row per participant id with a column per
 session (Stress / Aerobic / Anaerobic) -> the same id is the same person
@@ -52,6 +52,8 @@ odd last tag = rest start.
 Windows: 2 min sliding 30 s from each file's start, 1-s resolution; label if
 >= 90% of seconds in one phase, else dropped; coverage >= 0.75. start = naive UTC.
 r_hr_eda / r_hr_temp / r_eda_temp = Pearson r of the per-second series inside the window.
+scr_rate / scr_amp / rmssd_ms = richer.eda_bursts on the raw 4 Hz EDA samples in the window
+and richer.rmssd on the IBI.csv beats in the window (NaN if IBI.csv is empty: ANAEROBIC S01, or corrupt: STRESS S02).
 Run from project root: python src/datasets/stressexercise.py
 """
 import os
@@ -59,6 +61,9 @@ import sys
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from richer import eda_bursts, rmssd  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(ROOT, "data", "external", "stressexercise", "Wearable_Dataset")
@@ -68,6 +73,9 @@ WIN, STEP, FRAC, MINCOV = 120, 30, 0.9, 0.75
 V2_BASE = 270
 EXCLUDE = {("STRESS", "f07")}
 CUT = {("STRESS", "S02"): 1548}
+# S02 IBI.csv is duplicated (two concatenated blocks, bogus 1959 start time; the
+# authors say it is unclear where the duplicate starts) -> no rmssd for it.
+NO_IBI = {("STRESS", "S02")}
 
 
 def read_e4(path):
@@ -76,6 +84,16 @@ def read_e4(path):
         t0 = pd.Timestamp(f.readline().split(",")[0].strip())
     x = pd.read_csv(path, header=None, skiprows=1).to_numpy(dtype=float)
     return t0, x[0, 0], x[1:]
+
+
+def read_ibi(path, t0):
+    """IBI.csv -> (beat times in s from t0, IBI in s); empty if missing/empty."""
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        return np.array([]), np.array([])
+    with open(path) as f:  # row 0 = start time, rows 1.. = [s since start, IBI s]
+        ti = pd.Timestamp(f.readline().split(",")[0].strip())
+    x = pd.read_csv(path, header=None, skiprows=1).to_numpy(dtype=float).reshape(-1, 2)
+    return (ti - t0).total_seconds() + x[:, 0], x[:, 1]
 
 
 def read_tags(path, t0):
@@ -167,6 +185,8 @@ def session_rows(session, sid):
     h = hr[:, 0].copy(); h[(h < 35) | (h > 200)] = np.nan
     e = eda[:, 0].copy(); e[e < 0] = np.nan
     tp = temp[:, 0].copy(); tp[(tp < 20) | (tp > 42)] = np.nan
+    e_time = np.arange(len(e)) / 4.0
+    b_time, b_ibi = (np.array([]), np.array([])) if (session, sid) in NO_IBI else         read_ibi(os.path.join(d, "IBI.csv"), t0)
     mag = np.sqrt(((acc / 64.0) ** 2).sum(axis=1))
     arr = {"hr": per_second(h, 1.0, off(th), n), "eda": per_second(e, 4.0, 0, n),
            "temp": per_second(tp, 4.0, off(tt), n), "acc": per_second(mag, 32.0, off(ta), n)}
@@ -204,6 +224,7 @@ def session_rows(session, sid):
         move = np.sqrt(max(tot[1] / tot[2] - (tot[0] / tot[2]) ** 2, 0)) if tot[2] else np.nan
         for x, y in (("hr", "eda"), ("hr", "temp"), ("eda", "temp")):
             out[f"r_{x}_{y}"] = corr(sec[x][sl], sec[y][sl], WIN)
+        scr_rate, scr_amp = eda_bursts(e[(e_time >= s) & (e_time < s + WIN)], 4)
         rows.append({
             "pid": pid, "start": t0 + pd.Timedelta(seconds=s), "label": p[2],
             "normal": p[2] == "baseline", "hr_mean": out["hr"], "eda_mean": out["eda"],
@@ -211,6 +232,8 @@ def session_rows(session, sid):
             "r_hr_eda": out["r_hr_eda"], "r_hr_temp": out["r_hr_temp"], "r_eda_temp": out["r_eda_temp"],
             "session": session, "file": sid, "task": p[3], "t_rel_s": s,
             "sprint_s": int(spr[sl].sum()),
+            "scr_rate": scr_rate, "scr_amp": scr_amp,
+            "rmssd_ms": rmssd(b_ibi[(b_time >= s) & (b_time < s + WIN)]),
         })
     return rows
 
