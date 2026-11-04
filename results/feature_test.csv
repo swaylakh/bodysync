@@ -1,0 +1,21 @@
+variant,dataset,comparison,n_people,mean_auc,people_auc_above_0.5,people_lower_in_stress,p_value
+B,wesad,stress vs calm/rest,15,0.7827764136507597,13,12,0.0042724609375
+B + bursts,wesad,stress vs calm/rest,15,0.8696115994290438,13,13,0.00042724609375
+B + bursts + HRV,wesad,stress vs calm/rest,15,0.8723339224780455,13,13,0.00042724609375
+trained (XGBoost),wesad,stress vs calm/rest,15,0.9777355265558533,15,15,6.103515625e-05
+B,stressexercise,stress vs calm/rest,35,0.5986061200417964,21,21,0.016251272933164067
+B + bursts,stressexercise,stress vs calm/rest,35,0.6086570386580848,21,19,0.009594191207355557
+B + bursts + HRV,stressexercise,stress vs calm/rest,35,0.6424407973230448,23,21,0.003803181985858828
+trained (XGBoost),stressexercise,stress vs calm/rest,35,0.7080142025725001,27,27,4.563422407954931e-06
+B,stresspredict,stress vs calm/rest,35,0.5444612226865988,20,19,0.342327308608219
+B + bursts,stresspredict,stress vs calm/rest,35,0.5584175434608909,21,19,0.5544616600964218
+B + bursts + HRV,stresspredict,stress vs calm/rest,35,0.5592084392624279,21,19,0.49106516473693773
+trained (XGBoost),stresspredict,stress vs calm/rest,35,0.7074040758049842,30,30,1.603621058166027e-06
+B,e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9167730949340146,26,28,7.450580596923828e-09
+B + bursts,e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9825457641549595,29,29,3.725290298461914e-09
+B + bursts + HRV,e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9853128991060025,29,29,3.725290298461914e-09
+trained (XGBoost),e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9974457215836525,29,29,3.725290298461914e-09
+"trained, other datasets",wesad,stress vs calm/rest,15,0.9639103097939674,15,14,0.0001220703125
+"trained, other datasets",stressexercise,stress vs calm/rest,35,0.6911946605747953,27,26,0.00024297030176967382
+"trained, other datasets",stresspredict,stress vs calm/rest,35,0.671573015086424,31,29,0.00010868412209674716
+"trained, other datasets",e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9514687100893998,29,29,3.725290298461914e-09

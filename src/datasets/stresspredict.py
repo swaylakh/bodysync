@@ -27,12 +27,17 @@ resolution; a window gets a phase's label if >= 90% of its seconds lie in that
 phase, otherwise it is dropped. `start` is naive UTC.
 r_hr_eda / r_hr_temp / r_eda_temp = Pearson r of the per-second series inside the window.
 Signals: HR.csv (1 Hz), EDA.csv / TEMP.csv (4 Hz), ACC.csv (32 Hz, 1/64 g).
+scr_rate / scr_amp / rmssd_ms = richer.eda_bursts on the raw 4 Hz EDA samples in the window
+and richer.rmssd on the IBI.csv beats whose time falls in the window.
 """
 import os
 import sys
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from richer import eda_bursts, rmssd  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(ROOT, "data", "external", "stresspredict", "Stress-Predict-Dataset-main")
@@ -90,6 +95,16 @@ def corr(a, b, win):
     return float(np.corrcoef(a, b)[0, 1])
 
 
+def read_ibi(path):
+    """IBI.csv -> (absolute beat times in s, IBI in s); empty if missing."""
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        return np.array([]), np.array([])
+    with open(path) as f:
+        t0 = float(f.readline().split(",")[0])
+    x = pd.read_csv(path, header=None, skiprows=1).to_numpy(dtype=float).reshape(-1, 2)
+    return t0 + x[:, 0], x[:, 1]
+
+
 def phase_table(sid, row):
     date = pd.Timestamp(row[25])
 
@@ -106,6 +121,11 @@ def subject(sid, phases):
     eda = per_second(os.path.join(d, "EDA.csv"), 0, None)
     tmp = per_second(os.path.join(d, "TEMP.csv"), 20, 42)
     acc = per_second(os.path.join(d, "ACC.csv"), mag=True)
+    e_t0, e_fs, e_raw = read_e4(os.path.join(d, "EDA.csv"))
+    e_raw = e_raw[:, 0].copy()
+    e_raw[e_raw < 0] = np.nan
+    e_time = e_t0 + np.arange(len(e_raw)) / e_fs
+    b_time, b_ibi = read_ibi(os.path.join(d, "IBI.csv"))
 
     s0 = min(x.index.min() for x in (hr, eda, tmp))
     s1 = max(x.index.max() for x in (hr, eda, tmp)) + 1
@@ -162,6 +182,9 @@ def subject(sid, phases):
             r["move"] = np.sqrt(var)
         else:
             r["move"] = np.nan
+        ein = (e_time >= ws) & (e_time < ws + WIN)
+        r["scr_rate"], r["scr_amp"] = eda_bursts(e_raw[ein], int(e_fs))
+        r["rmssd_ms"] = rmssd(b_ibi[(b_time >= ws) & (b_time < ws + WIN)])
         rows.append(r)
     return rows
 
@@ -177,7 +200,8 @@ def main():
         rows += subject(sid, phase_table(sid, row))
     df = pd.DataFrame(rows)[["pid", "start", "label", "task", "normal", "hr_mean", "eda_mean",
                              "temp_mean", "move", "coverage",
-                             "r_hr_eda", "r_hr_temp", "r_eda_temp"]]
+                             "r_hr_eda", "r_hr_temp", "r_eda_temp",
+                             "scr_rate", "scr_amp", "rmssd_ms"]]
     df["start"] = df["start"].astype("datetime64[ns]")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     df.to_parquet(OUT, index=False)

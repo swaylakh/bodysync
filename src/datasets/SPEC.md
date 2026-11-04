@@ -20,6 +20,9 @@ Each loader in `src/datasets/<name>.py` turns one public Empatica dataset into a
 | `r_hr_eda` | float | Pearson r of per-second HR and EDA inside the window (seconds with both; NaN if < 50% usable or either is flat) |
 | `r_hr_temp` | float | same for HR and temp |
 | `r_eda_temp` | float | same for EDA and temp |
+| `scr_rate` | float | sweat bursts (SCRs) per minute: `richer.eda_bursts` on the raw 4 Hz `EDA.csv` samples inside the window |
+| `scr_amp` | float | mean burst size, µS (0 if no bursts), from the same call |
+| `rmssd_ms` | float | HRV, ms: `richer.rmssd` on the `IBI.csv` intervals whose beat time falls inside the window (NaN if < 20 valid beats or no IBI file) |
 
 Keep only windows with coverage ≥ 0.75. HR outside 35–200 bpm, temperature outside 20–42 °C and EDA < 0 become missing before averaging.
 
