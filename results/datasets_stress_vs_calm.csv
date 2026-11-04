@@ -1,0 +1,8 @@
+dataset,setting,comparison,n_people,score_calm,score_stress,people_lower_in_stress,p_value,mean_auc,people_auc_above_0.5,top_reason_in_stress
+adarp,free-living,stress vs calm/rest,11,76.9846613825699,79.79136664757334,4,0.240234375,0.4495119086708079,5,sweat high (34%)
+canstress,free-living,stress vs calm/rest,27,73.94895492281428,74.01175327299596,18,0.4846055656671524,0.5364820195264419,18,skin temp low (37%)
+e4stress,lab,stress vs baseline (weaker: baseline set the normal),29,88.52961041596973,38.272943211544906,28,7.450580596923828e-09,0.9167730949340146,26,sweat high (61%)
+nurse,free-living,felt stress vs flagged but not stressed,11,71.03520516544528,70.48664004032132,7,0.7646484375,0.5151119383336291,6,sweat high (54%)
+stressexercise,lab,stress vs calm/rest,35,56.5464095359008,48.91746088628465,21,0.016251272933164067,0.5986061200417964,21,sweat high (56%)
+stresspredict,lab,stress vs calm/rest,35,42.29534570158453,38.965733947778624,19,0.342327308608219,0.5444612226865988,20,sweat high (70%)
+wesad,lab,stress vs calm/rest,15,35.92938920763614,20.19355278515128,12,0.0042724609375,0.7827764136507597,13,sweat high (51%)

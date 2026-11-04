@@ -38,7 +38,7 @@ ANAEROBIC V2 (11 tags): baseline T0-270..T0 | warm-up T0-T1 unknown |
     sprints (T1,T2)..(T7,T8) -> anaerobic T1-T8 | cool-down T8-T9 unknown |
     rest T9-T10 recovery.
 Post-exercise rest is labelled `recovery` (not `rest`) so it never enters the
-calm group of multi_validate. `sprint_s` = seconds of actual sprint in a window.
+calm group of validate_datasets. `sprint_s` = seconds of actual sprint in a window.
 
 Special cases (data_constraints.txt): STRESS S02 duplicated data -> cut at
 1548 s (EDA/TEMP row 6195, ACC row 49545); STRESS f07 dock left on (HR/TEMP

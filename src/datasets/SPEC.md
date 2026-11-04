@@ -1,6 +1,6 @@
 # Converting an Empatica dataset for BodySync
 
-Each loader in `src/datasets/<name>.py` turns one public Empatica dataset into a window table that `src/multi_validate.py` scores the same way for every dataset.
+Each loader in `src/datasets/<name>.py` turns one public Empatica dataset into a window table that `src/validate_datasets.py` scores the same way for every dataset.
 
 ## Output
 

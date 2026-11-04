@@ -1,0 +1,5 @@
+task,comparison,n_people,median_gain,people_better,p_value
+sleep / rest / active,levels + personal + coupling vs levels + personal,20,0.005550783455861241,13,0.0064899700076656245
+sleep / rest / active,coupling only vs levels,20,-0.39743395920553704,0,1.9073486328125e-06
+sleep vs rest,levels + personal + coupling vs levels + personal,18,0.002564462488662378,10,0.32587002429697964
+sleep vs rest,coupling only vs levels,18,-0.28562382258306523,0,7.62939453125e-06

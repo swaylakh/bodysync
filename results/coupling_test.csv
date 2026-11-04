@@ -1,0 +1,9 @@
+task,features,balanced_acc,n_people,n_windows
+sleep / rest / active,coupling only,0.3723840521351409,21,8189
+sleep / rest / active,levels,0.8074571598496273,21,8189
+sleep / rest / active,levels + personal,0.8247267878570176,21,8189
+sleep / rest / active,levels + personal + coupling,0.8347649157895134,21,8189
+sleep vs rest,coupling only,0.5620559125721544,19,7476
+sleep vs rest,levels,0.8311967881082032,19,7476
+sleep vs rest,levels + personal,0.8777503552699423,19,7476
+sleep vs rest,levels + personal + coupling,0.8839051712212482,19,7476

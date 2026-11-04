@@ -20,8 +20,8 @@ HR_RANGE = (35, 200)        # bpm
 TEMP_RANGE = (25, 40)       # deg C, wrist skin
 EDA_FLOOR = 0.05            # uS; below this the sensor barely registers
 
-# Window settings: length in minutes -> step between window starts
-WINDOWS = {30: 15, 60: 30, 360: 60}
+# Windows: 30 minutes long, a new one every 15 minutes
+WINDOW_MIN, STEP_MIN = 30, 15
 MIN_COVERAGE = 0.75         # share of minutes in a window with all 3 signals
 MIN_PURITY = 0.70           # share of minutes in a window with the dominant state
 MIN_EDA_ABOVE_FLOOR = 0.5   # share of a window's EDA minutes above EDA_FLOOR
