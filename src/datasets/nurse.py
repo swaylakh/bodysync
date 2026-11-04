@@ -8,7 +8,7 @@ Stress level: 0 = no stress, 1 = medium, 2 = high, "na" = not answered.
 
 Input:  data/external/nurse/zips/<ID>/<ID>_<unix>.zip  (inner zips, extracted
         from Stress_dataset.zip with 7z; CSVs are read straight from the inner
-        zips with zipfile, BVP/IBI never read)
+        zips with zipfile, BVP never read)
         data/external/nurse/SurveyResults.xlsx
 Output: data/processed/ext_nurse_windows.parquet
 
@@ -40,13 +40,20 @@ move = SD of the ACC vector magnitude (g) over the window's samples.
 coverage = share of the 300 s having HR, EDA and TEMP; keep coverage >= 0.75.
 r_hr_eda / r_hr_temp / r_eda_temp = within-window Pearson r of the per-second
 signals (seconds with both present; NaN if < 50% usable or a signal is flat).
+scr_rate / scr_amp / rmssd_ms = richer.eda_bursts on the raw 4 Hz EDA samples in the window
+and richer.rmssd on the IBI.csv beats whose time falls in the window.
 """
 import io
+import os
+import sys
 import zipfile
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from richer import eda_bursts, rmssd  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 EXT = ROOT / "data" / "external" / "nurse"
@@ -57,7 +64,7 @@ TZ = "America/Chicago"
 WIN = 300
 CALM_GAP = 60 * 60
 COLS = ["pid", "start", "label", "normal", "hr_mean", "eda_mean", "temp_mean", "move", "coverage",
-        "r_hr_eda", "r_hr_temp", "r_eda_temp"]
+        "r_hr_eda", "r_hr_temp", "r_eda_temp", "scr_rate", "scr_amp", "rmssd_ms"]
 
 
 def read_e4(zf, name):
@@ -95,7 +102,19 @@ def corr(win, x, y):
     return r.where((g.size() >= 0.5 * WIN) & ~flat)
 
 
+def read_ibi(zf):
+    """Beat times (unix s) and IBIs (s) from IBI.csv; empty arrays if missing/broken."""
+    try:
+        raw = zf.read("IBI.csv")
+        t0 = float(pd.read_csv(io.BytesIO(raw), header=None, nrows=1).iloc[0, 0])
+        v = pd.read_csv(io.BytesIO(raw), header=None, skiprows=1).to_numpy(dtype=float)
+        return t0 + v[:, 0], v[:, 1]
+    except (KeyError, pd.errors.EmptyDataError, IndexError, ValueError):
+        return np.empty(0), np.empty(0)
+
+
 def load_session(path):
+    """(per-second frame, raw EDA times, raw EDA, beat times, IBIs) or None."""
     parts = {}
     with zipfile.ZipFile(path) as zf:
         for name, lo, hi in (("HR", 35, 200), ("EDA", 0, np.inf), ("TEMP", 20, 42)):
@@ -104,6 +123,8 @@ def load_session(path):
                 return None
             st, fs, v = r
             x = np.where((v[:, 0] >= lo) & (v[:, 0] <= hi), v[:, 0], np.nan)
+            if name == "EDA":
+                et, ex = st + np.arange(len(x)) / fs, x
             secs, sm, n = per_second(st, fs, x)
             parts[name.lower() + "_s"] = pd.Series(sm, index=secs)
             parts[name.lower() + "_n"] = pd.Series(n, index=secs)
@@ -115,7 +136,8 @@ def load_session(path):
             _, sq, _ = per_second(st, fs, mag ** 2)
             parts.update(acc_s=pd.Series(sm, index=secs), acc_q=pd.Series(sq, index=secs),
                          acc_n=pd.Series(n, index=secs))
-    return pd.DataFrame(parts).fillna(0.0)
+        bt, bx = read_ibi(zf)
+    return pd.DataFrame(parts).fillna(0.0), et, ex, bt, bx
 
 
 def load_survey():
@@ -136,10 +158,10 @@ def load_survey():
 
 
 def windows(pdir):
-    frames = [f for f in (load_session(z) for z in sorted(pdir.glob("*.zip"))) if f is not None]
-    if not frames:
+    loaded = [f for f in (load_session(z) for z in sorted(pdir.glob("*.zip"))) if f is not None]
+    if not loaded:
         return None
-    sec = pd.concat(frames).groupby(level=0).sum()
+    sec = pd.concat([f[0] for f in loaded]).groupby(level=0).sum()
     have = (sec["hr_n"] > 0) & (sec["eda_n"] > 0) & (sec["temp_n"] > 0)
     sec = sec.assign(win=(sec.index.values // WIN) * WIN, full=have.astype(int))
     g = sec.groupby("win").sum()
@@ -159,7 +181,17 @@ def windows(pdir):
                     for k in ("hr", "eda", "temp"))
     for col, x, y in (("r_hr_eda", hr, eda), ("r_hr_temp", hr, tmp), ("r_eda_temp", eda, tmp)):
         w[col] = corr(sec["win"].to_numpy(), x, y).reindex(w.index)
-    return w[w["coverage"] >= 0.75].copy()
+    w = w[w["coverage"] >= 0.75].copy()
+    et, ex, bt, bx = (np.concatenate([f[i] for f in loaded]) for i in range(1, 5))
+    oe, ob = np.argsort(et, kind="stable"), np.argsort(bt, kind="stable")
+    et, ex, bt, bx = et[oe], ex[oe], bt[ob], bx[ob]
+    rich = []
+    for ws in w.index.values.astype(float):
+        i0, i1 = np.searchsorted(et, [ws, ws + WIN])
+        j0, j1 = np.searchsorted(bt, [ws, ws + WIN])
+        rich.append((*eda_bursts(ex[i0:i1]), rmssd(bx[j0:j1])))
+    w[["scr_rate", "scr_amp", "rmssd_ms"]] = np.array(rich, dtype=float).reshape(-1, 3)
+    return w
 
 
 def label(s, iv):

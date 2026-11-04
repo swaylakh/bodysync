@@ -26,6 +26,8 @@ windows with coverage < 0.75 dropped. ``move`` = SD of the ACC vector magnitude 
 the raw 32 Hz samples in the window.
 ``r_hr_eda`` / ``r_hr_temp`` / ``r_eda_temp`` = within-window Pearson r of the per-second
 signals (seconds with both present; NaN if < 50% usable or a signal is flat).
+``scr_rate`` / ``scr_amp`` / ``rmssd_ms`` = richer.eda_bursts on the raw 4 Hz EDA samples in the
+window and richer.rmssd on the IBI.csv beats whose time falls in the window.
 
 Labels (ratings-based; replaces the SPEC "60 min away" calm rule)
 ----------------------------------------------------------------
@@ -47,10 +49,14 @@ from __future__ import annotations
 import io
 import os
 import re
+import sys
 import zipfile
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from richer import eda_bursts, rmssd  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(ROOT, "data", "external", "canstress", "CAN-STRESS")
@@ -67,6 +73,17 @@ def _read_e4(zf: zipfile.ZipFile, name: str):
     fs = float(head.iloc[1, 0])
     data = pd.read_csv(io.BytesIO(raw), header=None, skiprows=2).to_numpy(dtype=float)
     return t0, fs, data
+
+
+def _read_ibi(zf: zipfile.ZipFile):
+    """Beat times (unix s) and IBIs (s) from IBI.csv; empty arrays if missing/broken."""
+    try:
+        raw = zf.read("IBI.csv")
+        t0 = float(pd.read_csv(io.BytesIO(raw), header=None, nrows=1).iloc[0, 0])
+        v = pd.read_csv(io.BytesIO(raw), header=None, skiprows=1).to_numpy(dtype=float)
+        return t0 + v[:, 0], v[:, 1]
+    except (KeyError, pd.errors.EmptyDataError, IndexError, ValueError):
+        return np.empty(0), np.empty(0)
 
 
 def _per_second(t0, fs, x, grid0, n):
@@ -122,6 +139,7 @@ def session_windows(path: str) -> pd.DataFrame:
         eda_t0, eda_fs, eda = _read_e4(zf, "EDA.csv")
         tmp_t0, tmp_fs, tmp = _read_e4(zf, "TEMP.csv")
         acc_t0, acc_fs, acc = _read_e4(zf, "ACC.csv")
+        ibi_t, ibi = _read_ibi(zf)
     hr, eda, tmp = hr[:, 0], eda[:, 0].copy(), tmp[:, 0].copy()
     hr = np.where((hr >= 35) & (hr <= 200), hr, np.nan)
     eda = np.where(eda >= 0, eda, np.nan)
@@ -137,6 +155,9 @@ def session_windows(path: str) -> pd.DataFrame:
     T = _per_second(tmp_t0, tmp_fs, tmp, grid0, n)
     mag = np.sqrt((acc ** 2).sum(axis=1)) / 64.0
     acc_sec = np.floor(acc_t0 - grid0 + np.arange(len(mag)) / acc_fs).astype(np.int64)
+    eda_t = eda_t0 + np.arange(len(eda)) / eda_fs
+    o = np.argsort(ibi_t, kind="stable")
+    ibi_t, ibi = ibi_t[o], ibi[o]
 
     nw = n // WIN
     rows = []
@@ -148,6 +169,9 @@ def session_windows(path: str) -> pd.DataFrame:
             continue
         i0, i1 = np.searchsorted(acc_sec, [a, b])
         m = mag[i0:i1]
+        e0, e1 = np.searchsorted(eda_t, [grid0 + a, grid0 + b])
+        j0, j1 = np.searchsorted(ibi_t, [grid0 + a, grid0 + b])
+        scr_rate, scr_amp = eda_bursts(eda[e0:e1], int(eda_fs))
         rows.append(dict(
             start_unix=grid0 + a,
             hr_mean=float(np.nanmean(h)), eda_mean=float(np.nanmean(e)),
@@ -155,6 +179,7 @@ def session_windows(path: str) -> pd.DataFrame:
             move=float(np.std(m)) if len(m) > 1 else np.nan,
             coverage=cov,
             r_hr_eda=_corr(h, e), r_hr_temp=_corr(h, t), r_eda_temp=_corr(e, t),
+            scr_rate=scr_rate, scr_amp=scr_amp, rmssd_ms=rmssd(ibi[j0:j1]),
         ))
     return pd.DataFrame(rows)
 
@@ -200,7 +225,8 @@ def main():
     df = pd.concat(out, ignore_index=True)
     df["normal"] = True
     df = df[["pid", "start", "label", "normal", "hr_mean", "eda_mean", "temp_mean",
-             "move", "coverage", "r_hr_eda", "r_hr_temp", "r_eda_temp", "cannabis_user", "session"]]
+             "move", "coverage", "r_hr_eda", "r_hr_temp", "r_eda_temp", "scr_rate", "scr_amp", "rmssd_ms",
+             "cannabis_user", "session"]]
     df = df.sort_values(["pid", "start"]).reset_index(drop=True)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     df.to_parquet(OUT, index=False)

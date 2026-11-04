@@ -2,20 +2,49 @@ variant,dataset,comparison,n_people,mean_auc,people_auc_above_0.5,people_lower_i
 B,wesad,stress vs calm/rest,15,0.7827764136507597,13,12,0.0042724609375
 B + bursts,wesad,stress vs calm/rest,15,0.8696115994290438,13,13,0.00042724609375
 B + bursts + HRV,wesad,stress vs calm/rest,15,0.8723339224780455,13,13,0.00042724609375
-trained (XGBoost),wesad,stress vs calm/rest,15,0.9777355265558533,15,15,6.103515625e-05
+"trained, new dataset",wesad,stress vs calm/rest,15,0.9356604154063319,15,15,6.103515625e-05
+"trained, new people",wesad,stress vs calm/rest,15,0.9702326271190961,15,15,6.103515625e-05
+"trained + change, new dataset",wesad,stress vs calm/rest,15,0.8431937881917124,15,15,6.103515625e-05
+"trained + change, new people",wesad,stress vs calm/rest,15,0.9747942440178777,15,15,6.103515625e-05
 B,stressexercise,stress vs calm/rest,35,0.5986061200417964,21,21,0.016251272933164067
 B + bursts,stressexercise,stress vs calm/rest,35,0.6086570386580848,21,19,0.009594191207355557
 B + bursts + HRV,stressexercise,stress vs calm/rest,35,0.6424407973230448,23,21,0.003803181985858828
-trained (XGBoost),stressexercise,stress vs calm/rest,35,0.7080142025725001,27,27,4.563422407954931e-06
+"trained, new dataset",stressexercise,stress vs calm/rest,35,0.7182979607227461,26,29,5.452072946354747e-05
+"trained, new people",stressexercise,stress vs calm/rest,35,0.7136472585366093,27,26,5.452072946354747e-05
+"trained + change, new dataset",stressexercise,stress vs calm/rest,35,0.7266552291663502,28,28,8.71450174599886e-06
+"trained + change, new people",stressexercise,stress vs calm/rest,35,0.8145398398155658,32,29,5.779438652098179e-07
 B,stresspredict,stress vs calm/rest,35,0.5444612226865988,20,19,0.342327308608219
 B + bursts,stresspredict,stress vs calm/rest,35,0.5584175434608909,21,19,0.5544616600964218
 B + bursts + HRV,stresspredict,stress vs calm/rest,35,0.5592084392624279,21,19,0.49106516473693773
-trained (XGBoost),stresspredict,stress vs calm/rest,35,0.7074040758049842,30,30,1.603621058166027e-06
+"trained, new dataset",stresspredict,stress vs calm/rest,35,0.6561658095822753,28,27,0.00035537133226171136
+"trained, new people",stresspredict,stress vs calm/rest,35,0.6584626767538043,30,30,1.7739308532327414e-05
+"trained + change, new dataset",stresspredict,stress vs calm/rest,35,0.6738430014839984,30,30,4.556449130177498e-05
+"trained + change, new people",stresspredict,stress vs calm/rest,35,0.8148287305052307,34,34,1.4551915228366852e-09
 B,e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9167730949340146,26,28,7.450580596923828e-09
 B + bursts,e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9825457641549595,29,29,3.725290298461914e-09
 B + bursts + HRV,e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9853128991060025,29,29,3.725290298461914e-09
-trained (XGBoost),e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9974457215836525,29,29,3.725290298461914e-09
-"trained, other datasets",wesad,stress vs calm/rest,15,0.9639103097939674,15,14,0.0001220703125
-"trained, other datasets",stressexercise,stress vs calm/rest,35,0.6911946605747953,27,26,0.00024297030176967382
-"trained, other datasets",stresspredict,stress vs calm/rest,35,0.671573015086424,31,29,0.00010868412209674716
-"trained, other datasets",e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9514687100893998,29,29,3.725290298461914e-09
+"trained, new dataset",e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9897828863346104,29,29,3.725290298461914e-09
+"trained, new people",e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9961685823754789,29,29,3.725290298461914e-09
+"trained + change, new dataset",e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9510429970200085,29,29,3.725290298461914e-09
+"trained + change, new people",e4stress,stress vs baseline (weaker: baseline set the normal),29,0.9931885908897403,29,29,3.725290298461914e-09
+B,nurse,felt stress vs flagged but not stressed,11,0.5151119383336291,6,7,0.7646484375
+B + bursts,nurse,felt stress vs flagged but not stressed,11,0.5712669018468679,8,8,0.1748046875
+B + bursts + HRV,nurse,felt stress vs flagged but not stressed,11,0.5702657188867319,7,8,0.1748046875
+"trained, new dataset",nurse,felt stress vs flagged but not stressed,11,0.5185796991034229,6,7,0.7646484375
+"trained, new people",nurse,felt stress vs flagged but not stressed,11,0.5200693170016641,7,8,0.3203125
+"trained + change, new dataset",nurse,felt stress vs flagged but not stressed,11,0.49961813827845264,6,5,0.8984375
+"trained + change, new people",nurse,felt stress vs flagged but not stressed,11,0.5439541052967521,7,8,0.123046875
+B,adarp,stress vs calm/rest,11,0.4495119086708079,5,4,0.240234375
+B + bursts,adarp,stress vs calm/rest,11,0.486814329707564,8,8,0.6376953125
+B + bursts + HRV,adarp,stress vs calm/rest,11,0.4887901433585254,8,8,0.6376953125
+"trained, new dataset",adarp,stress vs calm/rest,11,0.5226831112660494,5,8,0.4130859375
+"trained, new people",adarp,stress vs calm/rest,11,0.5720112288411632,10,9,0.0185546875
+"trained + change, new dataset",adarp,stress vs calm/rest,11,0.5003779534958906,5,5,0.8984375
+"trained + change, new people",adarp,stress vs calm/rest,11,0.571560116244019,9,9,0.0419921875
+B,canstress,stress vs calm/rest,27,0.5364820195264419,18,18,0.4846055656671524
+B + bursts,canstress,stress vs calm/rest,27,0.5437242855235627,17,18,0.2686719596385956
+B + bursts + HRV,canstress,stress vs calm/rest,27,0.5373530922574031,18,18,0.2686719596385956
+"trained, new dataset",canstress,stress vs calm/rest,27,0.5658891125457349,15,15,0.219833105802536
+"trained, new people",canstress,stress vs calm/rest,27,0.6369813338833938,19,19,0.02623094618320465
+"trained + change, new dataset",canstress,stress vs calm/rest,27,0.5177540727399003,15,14,0.5460177063941956
+"trained + change, new people",canstress,stress vs calm/rest,27,0.6520039972389259,20,20,0.006998494267463684

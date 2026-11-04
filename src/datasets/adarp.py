@@ -5,7 +5,7 @@ daily life (FREE-LIVING). Participants pressed the E4 event button when they
 felt more stressed than usual; presses are in each session's ``tags.csv``.
 
 Input:  data/external/adarp/Sensor Data/Part <id>C/<session>/{HR,EDA,TEMP,ACC,tags}.csv
-        (extracted from "Sensor Data.zip"; BVP/IBI are not used)
+        (extracted from "Sensor Data.zip"; BVP is not used)
 Output: data/processed/ext_adarp_windows.parquet
 
 Windows: 5-min windows sliding by 5 min, aligned to multiples of 300 s of unix
@@ -32,11 +32,18 @@ move = SD of the ACC vector magnitude (g) over the window's samples.
 coverage = share of the 300 s having HR, EDA and TEMP; keep coverage >= 0.75.
 r_hr_eda / r_hr_temp / r_eda_temp = within-window Pearson r of the per-second
 signals (seconds with both present; NaN if < 50% usable or a signal is flat).
+scr_rate / scr_amp / rmssd_ms = richer.eda_bursts on the raw 4 Hz EDA samples in the window
+and richer.rmssd on the IBI.csv beats whose time falls in the window (IBI.csv re-extracted from sensor.zip).
 """
+import os
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from richer import eda_bursts, rmssd  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "data" / "external" / "adarp" / "Sensor Data"
@@ -116,6 +123,24 @@ def load_session(d):
     return df, (min(span), max(span))
 
 
+def load_raw(d):
+    """Raw EDA (times, uS; < 0 -> NaN) and IBI (beat times, s) of one session; empty if missing."""
+    et, ex, bt, bx = (np.empty(0),) * 4
+    try:
+        st, fs, v = read_e4(d / "EDA.csv")
+        ex = np.where(v[:, 0] >= 0, v[:, 0], np.nan)
+        et = st + np.arange(len(ex)) / fs
+    except (FileNotFoundError, pd.errors.EmptyDataError, IndexError, ValueError):
+        pass
+    try:
+        st = float(pd.read_csv(d / "IBI.csv", header=None, nrows=1).iloc[0, 0])
+        v = pd.read_csv(d / "IBI.csv", header=None, skiprows=1).to_numpy(dtype=float)
+        bt, bx = st + v[:, 0], v[:, 1]
+    except (FileNotFoundError, pd.errors.EmptyDataError, IndexError, ValueError):
+        pass
+    return et, ex, bt, bx
+
+
 def read_tags(d, span):
     f = d / "tags.csv"
     if not f.exists() or f.stat().st_size == 0:
@@ -130,12 +155,13 @@ def read_tags(d, span):
 
 def process_person(pdir):
     pid = "adarp_" + pdir.name.replace("Part ", "")
-    frames, tags = [], []
+    frames, tags, raws = [], [], []
     for d in sorted(p for p in pdir.iterdir() if p.is_dir()):
         df, span = load_session(d)
         tags += read_tags(d, span)
         if df is not None:
             frames.append(df)
+            raws.append(load_raw(d))
     if not frames:
         return None, tags
     sec = pd.concat(frames).groupby(level=0).sum()  # overlapping sessions: pool sums/counts
@@ -160,6 +186,15 @@ def process_person(pdir):
     for col, x, y in (("r_hr_eda", hr, eda), ("r_hr_temp", hr, tmp), ("r_eda_temp", eda, tmp)):
         w[col] = corr(sec["win"].to_numpy(), x, y).reindex(w.index)
     w = w[w["coverage"] >= 0.75].copy()
+    et, ex, bt, bx = (np.concatenate([r[i] for r in raws]) for i in range(4))
+    oe, ob = np.argsort(et, kind="stable"), np.argsort(bt, kind="stable")
+    et, ex, bt, bx = et[oe], ex[oe], bt[ob], bx[ob]
+    rich = []
+    for ws in w.index.values.astype(float):
+        i0, i1 = np.searchsorted(et, [ws, ws + WIN])
+        j0, j1 = np.searchsorted(bt, [ws, ws + WIN])
+        rich.append((*eda_bursts(ex[i0:i1]), rmssd(bx[j0:j1])))
+    w[["scr_rate", "scr_amp", "rmssd_ms"]] = np.array(rich, dtype=float).reshape(-1, 3)
 
     s = w.index.values.astype(float)
     e = s + WIN
@@ -184,7 +219,7 @@ def process_person(pdir):
     w["start"] = pd.to_datetime(w.index.values, unit="s")
     w = w.reset_index(drop=True)
     return w[["pid", "start", "label", "normal", "hr_mean", "eda_mean", "temp_mean", "move", "coverage",
-              "r_hr_eda", "r_hr_temp", "r_eda_temp"]], tags
+              "r_hr_eda", "r_hr_temp", "r_eda_temp", "scr_rate", "scr_amp", "rmssd_ms"]], tags
 
 
 def main():
