@@ -11,17 +11,13 @@
 
 \graphicspath{{figures/}{./}}
 
-\title{HealthMonitoring}
-\author{Manideepa Mukherjee Bhakat}
-\date{October 2026}
+\title{BodySync: Comparing a Sync Score and a Personal-Normal Score\\on Wrist Physiology\\[6pt]
+\large Progress report: free-living data and laboratory stress datasets}
+\author{Swayam Lakhotia \and Bhavya Bajaj \and Ananya Khaitan}
+\date{November 2026}
 
 \begin{document}
 \maketitle
-
-\begin{center}
-{\Large\textbf{BodySync: Comparing a Sync Score and a Personal-Normal Score on Wrist Physiology}}\\[4pt]
-{\large Progress report: free-living data and laboratory stress datasets}
-\end{center}
 
 \begin{abstract}
 Wrist wearables record heart rate, electrodermal activity (EDA) and skin temperature continuously. We compare two candidate scores built from these signals. Score~A (\emph{sync}) measures whether the three signals move together the way they usually do for a person. Score~B (\emph{BodySync}) measures how far their levels are from the person's own normal for the same situation, counting only changes in the stress direction. Both were built on ZU-PWD~'25, a free-living Empatica EmbracePlus dataset (27 people, 901{,}440 minutes). In ZU-PWD, coupling features were close to chance at telling sleep, rest and activity apart (balanced accuracy 0.37, vs.\ 0.81 for signal levels). On four public laboratory stress datasets recorded with the Empatica E4, the sync score did not separate stress from calm in any fair test (within-person AUC 0.46--0.49). BodySync separated acute stress on WESAD (AUC 0.78, lower under stress for 12 of 15 people) and more weakly on two other laboratory datasets (AUC 0.60 and 0.54). Testing on everyday-life stress datasets is the next step.
