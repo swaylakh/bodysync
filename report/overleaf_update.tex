@@ -54,20 +54,22 @@ WESAD is the standard benchmark for wearable stress detection, so it is the most
 
 \section{What we found so far}
 
-\paragraph{1. ``Moving together'' carries little information.} On ZU-PWD we trained a model to tell sleep, rest and activity apart, always testing on people it had never seen. Using only how the signals move together, it was barely better than guessing. Using the signal values compared with each person's normal, it was right most of the time, and adding sync on top barely changed anything.
+\paragraph{1. ``Moving together'' carries little information.} For every 30 minutes of ZU-PWD data we measured \emph{sync}: for each pair of signals (heart rate and sweat, heart rate and temperature, sweat and temperature), do they rise and fall together? That gives one number per pair, from $-1$ (one goes up when the other goes down) to $+1$ (they move together). We then asked a model whether the person was asleep, resting or active, always testing on people it had never seen.
+
+Given only the three sync numbers, the model was right 37\% of the time, barely better than random guessing (33\% with three options). Given the actual signal values compared with each person's normal, it was right 83\% of the time, and adding sync on top barely changed anything.
 
 \begin{table}[h]
 \centering
 \caption{How often the model gets the state right (ZU-PWD, unseen people).}
 \begin{tabular}{lcc}
 \toprule
-Model uses & Sleep / rest / active & Sleep vs rest \\
+Model is given & Asleep / resting / active & Asleep vs resting \\
 \midrule
-Sync only & 37\% & 56\% \\
+Only sync (how the signals move together) & 37\% & 56\% \\
 Signal values vs your normal & 83\% & 88\% \\
 Signal values vs your normal + sync & 84\% & 88\% \\
 \midrule
-Coin flip & 33\% & 50\% \\
+Random guessing & 33\% & 50\% \\
 \bottomrule
 \end{tabular}
 \end{table}
