@@ -17,6 +17,9 @@ Each loader in `src/datasets/<name>.py` turns one public Empatica dataset into a
 | `temp_mean` | float | mean skin temperature, °C |
 | `move` | float | mean accelerometer magnitude deviation (SD of the vector magnitude in the window, in g) |
 | `coverage` | float | share of the window's seconds that have all of HR, EDA and temp |
+| `r_hr_eda` | float | Pearson r of per-second HR and EDA inside the window (seconds with both; NaN if < 50% usable or either is flat) |
+| `r_hr_temp` | float | same for HR and temp |
+| `r_eda_temp` | float | same for EDA and temp |
 
 Keep only windows with coverage ≥ 0.75. HR outside 35–200 bpm, temperature outside 20–42 °C and EDA < 0 become missing before averaging.
 

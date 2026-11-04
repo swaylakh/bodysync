@@ -45,6 +45,7 @@ against neighbouring samples and subject_01's unmangled export).
 Windows: 2 min sliding by 30 s on a grid from the recording start, 1-s
 resolution; a window gets a phase's label if >= 90% of its seconds lie in that
 phase, otherwise it is dropped. `start` is naive UTC.
+r_hr_eda / r_hr_temp / r_eda_temp = Pearson r of the per-second series inside the window.
 """
 import os
 import sys
@@ -108,6 +109,17 @@ def per_second(x, fs, offset, lo=None, hi=None, mag=False):
     return df.groupby("s").agg(sum=("v", "sum"), sq=("v2", "sum"), n=("v", "size"))
 
 
+def corr(a, b, win):
+    """Pearson r of two per-second series (NaN = missing); NaN if < 50% usable or flat."""
+    ok = ~np.isnan(a) & ~np.isnan(b)
+    if ok.sum() < 0.5 * win:
+        return np.nan
+    a, b = a[ok], b[ok]
+    if a.std() == 0 or b.std() == 0:
+        return np.nan
+    return float(np.corrcoef(a, b)[0, 1])
+
+
 def subject(d):
     sid = d[-2:]
     t_temp, temp = read_e4(os.path.join(SRC, d, "TEMP.csv"), "TEMP")
@@ -136,6 +148,8 @@ def subject(d):
     have = np.ones(n, bool)
     for k in ("hr", "eda", "temp"):
         have &= arr[k][:, 2] > 0
+    sec = {k: np.where(arr[k][:, 2] > 0, arr[k][:, 0] / np.maximum(arr[k][:, 2], 1), np.nan)
+           for k in ("hr", "eda", "temp")}
 
     phase = np.full(n, -1)
     for i, (a, b, _, _) in enumerate(PHASES):
@@ -155,12 +169,16 @@ def subject(d):
             out[k] = tot[0] / tot[2] if tot[2] else np.nan
         tot = arr["acc"][sl].sum(axis=0)
         move = np.sqrt(max(tot[1] / tot[2] - (tot[0] / tot[2]) ** 2, 0)) if tot[2] else np.nan
+        for x, y in (("hr", "eda"), ("hr", "temp"), ("eda", "temp")):
+            out[f"r_{x}_{y}"] = corr(sec[x][sl], sec[y][sl], WIN)
         rows.append({
             "pid": f"{NAME}_{sid}",
             "start": pd.to_datetime(t0 + s, unit="s") if t0 is not None else pd.NaT,
             "label": p[2], "task": p[3], "normal": p[2] == "baseline",
             "hr_mean": out["hr"], "eda_mean": out["eda"], "temp_mean": out["temp"],
-            "move": move, "coverage": have[sl].mean(), "t_rel_s": s,
+            "move": move, "coverage": have[sl].mean(),
+            "r_hr_eda": out["r_hr_eda"], "r_hr_temp": out["r_hr_temp"], "r_eda_temp": out["r_eda_temp"],
+            "t_rel_s": s,
         })
     return rows
 

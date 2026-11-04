@@ -7,3 +7,13 @@ docs/2026_IJHCS_*.pdf
 
 __pycache__/
 *.pyc
+
+# LaTeX build files and the figure copies made for Overleaf
+report/figures/
+report/*.aux
+report/*.bbl
+report/*.blg
+report/*.fdb_latexmk
+report/*.fls
+report/*.log
+report/*.out

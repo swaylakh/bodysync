@@ -8,6 +8,7 @@ an unpickler that only allows numpy arrays, so a pickle can't run code on load.
 Signals are brought to 1 reading per second (EDA/temp 4 Hz, pulse 64 Hz -> heart rate
 from pulse peaks), then cut into 2-min windows sliding by 30 s, per src/datasets/SPEC.md.
 A window gets a condition if at least 90% of its seconds are in it. normal = baseline.
+r_hr_eda, r_hr_temp, r_eda_temp: Pearson r of the two 1-s series inside each window.
 """
 import pickle
 import zipfile
@@ -62,6 +63,13 @@ def load_subject(zf: zipfile.ZipFile, member: str) -> pd.DataFrame:
     })
 
 
+def pearson(x: pd.Series, y: pd.Series) -> float:
+    m = x.notna() & y.notna()
+    if m.mean() < 0.5 or x[m].std() == 0 or y[m].std() == 0:
+        return np.nan
+    return float(np.corrcoef(x[m], y[m])[0, 1])
+
+
 def windows(sig: pd.DataFrame, pid: str) -> pd.DataFrame:
     rows, lab = [], sig.label.to_numpy()
     for start in range(0, len(sig) - WIN + 1, STEP):
@@ -74,7 +82,9 @@ def windows(sig: pd.DataFrame, pid: str) -> pd.DataFrame:
         rows.append({"pid": f"wesad_{pid}", "start": pd.Timestamp(0) + pd.Timedelta(seconds=start),
                      "label": cond, "normal": cond == "baseline", "hr_mean": part.hr.mean(),
                      "eda_mean": part.eda.mean(), "temp_mean": part.temp.mean(),
-                     "move": part.mag_sd.mean(), "coverage": 1.0})
+                     "move": part.mag_sd.mean(), "coverage": 1.0,
+                     "r_hr_eda": pearson(part.hr, part.eda), "r_hr_temp": pearson(part.hr, part.temp),
+                     "r_eda_temp": pearson(part.eda, part.temp)})
     return pd.DataFrame(rows)
 
 

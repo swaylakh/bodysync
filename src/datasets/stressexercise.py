@@ -51,6 +51,7 @@ odd last tag = rest start.
 
 Windows: 2 min sliding 30 s from each file's start, 1-s resolution; label if
 >= 90% of seconds in one phase, else dropped; coverage >= 0.75. start = naive UTC.
+r_hr_eda / r_hr_temp / r_eda_temp = Pearson r of the per-second series inside the window.
 Run from project root: python src/datasets/stressexercise.py
 """
 import os
@@ -93,6 +94,17 @@ def per_second(v, fs, offset, n):
     np.add.at(a, (sec[ok], 1), v[ok] ** 2)
     np.add.at(a, (sec[ok], 2), 1)
     return a
+
+
+def corr(a, b, win):
+    """Pearson r of two per-second series (NaN = missing); NaN if < 50% usable or flat."""
+    ok = ~np.isnan(a) & ~np.isnan(b)
+    if ok.sum() < 0.5 * win:
+        return np.nan
+    a, b = a[ok], b[ok]
+    if a.std() == 0 or b.std() == 0:
+        return np.nan
+    return float(np.corrcoef(a, b)[0, 1])
 
 
 def phases(session, sid, T, end):
@@ -159,6 +171,8 @@ def session_rows(session, sid):
     arr = {"hr": per_second(h, 1.0, off(th), n), "eda": per_second(e, 4.0, 0, n),
            "temp": per_second(tp, 4.0, off(tt), n), "acc": per_second(mag, 32.0, off(ta), n)}
     have = (arr["hr"][:, 2] > 0) & (arr["eda"][:, 2] > 0) & (arr["temp"][:, 2] > 0)
+    sec = {k: np.where(arr[k][:, 2] > 0, arr[k][:, 0] / np.maximum(arr[k][:, 2], 1), np.nan)
+           for k in ("hr", "eda", "temp")}
 
     T = read_tags(os.path.join(d, "tags.csv"), t0)
     P, sprints = phases(session, sid, T, dur)
@@ -188,10 +202,13 @@ def session_rows(session, sid):
             out[k] = tot[0] / tot[2] if tot[2] else np.nan
         tot = arr["acc"][sl].sum(axis=0)
         move = np.sqrt(max(tot[1] / tot[2] - (tot[0] / tot[2]) ** 2, 0)) if tot[2] else np.nan
+        for x, y in (("hr", "eda"), ("hr", "temp"), ("eda", "temp")):
+            out[f"r_{x}_{y}"] = corr(sec[x][sl], sec[y][sl], WIN)
         rows.append({
             "pid": pid, "start": t0 + pd.Timedelta(seconds=s), "label": p[2],
             "normal": p[2] == "baseline", "hr_mean": out["hr"], "eda_mean": out["eda"],
             "temp_mean": out["temp"], "move": move, "coverage": have[sl].mean(),
+            "r_hr_eda": out["r_hr_eda"], "r_hr_temp": out["r_hr_temp"], "r_eda_temp": out["r_eda_temp"],
             "session": session, "file": sid, "task": p[3], "t_rel_s": s,
             "sprint_s": int(spr[sl].sum()),
         })

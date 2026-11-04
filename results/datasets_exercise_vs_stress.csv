@@ -1,7 +1,7 @@
-label,stressexercise
-aerobic,16.8
-anaerobic,17.4
-baseline,83.7
-recovery,26.9
-rest,60.6
-stress,44.5
+label,A sync,B BodySync
+aerobic,36.8,16.8
+anaerobic,48.0,17.4
+baseline,72.3,83.7
+recovery,53.1,26.9
+rest,55.5,60.6
+stress,46.8,44.5

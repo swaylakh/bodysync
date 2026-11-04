@@ -24,6 +24,8 @@ EDA and TEMP (4 Hz, averaged per second). HR outside 35-200 bpm, TEMP outside 20
 and EDA < 0 set to missing. ``coverage`` = share of the 300 s with all three valid;
 windows with coverage < 0.75 dropped. ``move`` = SD of the ACC vector magnitude (g) over
 the raw 32 Hz samples in the window.
+``r_hr_eda`` / ``r_hr_temp`` / ``r_eda_temp`` = within-window Pearson r of the per-second
+signals (seconds with both present; NaN if < 50% usable or a signal is flat).
 
 Labels (ratings-based; replaces the SPEC "60 min away" calm rule)
 ----------------------------------------------------------------
@@ -79,6 +81,18 @@ def _per_second(t0, fs, x, grid0, n):
     with np.errstate(invalid="ignore", divide="ignore"):
         out = np.where(c > 0, s / np.maximum(c, 1), np.nan)
     return out
+
+
+def _corr(x, y):
+    """Pearson r over seconds where both are finite; NaN if < 50% of WIN or a series is flat."""
+    ok = np.isfinite(x) & np.isfinite(y)
+    if ok.sum() < 0.5 * WIN:
+        return np.nan
+    x, y = x[ok], y[ok]
+    if x.max() == x.min() or y.max() == y.min():
+        return np.nan
+    x, y = x - x.mean(), y - y.mean()
+    return float((x * y).sum() / np.sqrt((x ** 2).sum() * (y ** 2).sum()))
 
 
 def load_logbook():
@@ -140,6 +154,7 @@ def session_windows(path: str) -> pd.DataFrame:
             temp_mean=float(np.nanmean(t)),
             move=float(np.std(m)) if len(m) > 1 else np.nan,
             coverage=cov,
+            r_hr_eda=_corr(h, e), r_hr_temp=_corr(h, t), r_eda_temp=_corr(e, t),
         ))
     return pd.DataFrame(rows)
 
@@ -185,7 +200,7 @@ def main():
     df = pd.concat(out, ignore_index=True)
     df["normal"] = True
     df = df[["pid", "start", "label", "normal", "hr_mean", "eda_mean", "temp_mean",
-             "move", "coverage", "cannabis_user", "session"]]
+             "move", "coverage", "r_hr_eda", "r_hr_temp", "r_eda_temp", "cannabis_user", "session"]]
     df = df.sort_values(["pid", "start"]).reset_index(drop=True)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     df.to_parquet(OUT, index=False)

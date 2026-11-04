@@ -5,6 +5,7 @@ src/datasets/SPEC.md). Every dataset is then scored the same way:
   - normal = rows with normal=True (lab: the baseline rest; free-living: all windows)
   - free-living data is split into still / moving by each person's own movement, so
     moving is compared with the person's own moving (these datasets have no sleep labels)
+  - both scores (A sync, B BodySync; see bodysync.py) on the same windows
   - per person: mean score in stress vs calm windows, and a within-person AUC
     (how well a lower score picks out stress windows; 0.5 = chance)
 
@@ -27,6 +28,7 @@ from config import FIGURES, PROCESSED, RESULTS
 CALM = {"calm", "rest", "relax", "amusement", "meditation"}
 CALM_OVERRIDE = {"nurse": ({"no_stress"}, "felt stress vs flagged but not stressed")}
 MIN_WINDOWS = 3
+SCORES = {"sync": "A sync", "bodysync": "B BodySync"}
 
 
 def load_all() -> dict[str, tuple[pd.DataFrame, str]]:
@@ -47,17 +49,18 @@ def score(w: pd.DataFrame, setting: str) -> pd.DataFrame:
     return bodysync.compute(w, context=pd.Series(ctx, index=w.index), normal=w["normal"].astype(bool))
 
 
-def evaluate(name: str, s: pd.DataFrame, setting: str) -> dict:
+def evaluate(name: str, s: pd.DataFrame, setting: str, col: str) -> dict:
     calm, comparison = CALM_OVERRIDE.get(name, (CALM, "stress vs calm/rest"))
     if not s.label.isin(calm).any():
         calm, comparison = {"baseline"}, "stress vs baseline (weaker: baseline set the normal)"
     s = s[(s.label == "stress") | s.label.isin(calm)].assign(stress=lambda d: d.label == "stress")
-    per = s.groupby(["pid", "stress"]).bodysync.agg(["mean", "size"]).unstack()
+    s = s.dropna(subset=[col])
+    per = s.groupby(["pid", "stress"])[col].agg(["mean", "size"]).unstack()
     per = per["mean"][(per["size"] >= MIN_WINDOWS).all(axis=1)]
     aucs = s[s.pid.isin(per.index)].groupby("pid").apply(
-        lambda g: roc_auc_score(g.stress, -g.bodysync), include_groups=False)
-    reasons = s[s.stress].main_reason.value_counts(normalize=True)
-    return {"dataset": name, "setting": setting, "comparison": comparison, "n_people": len(per),
+        lambda g: roc_auc_score(g.stress, -g[col]), include_groups=False)
+    reasons = s[s.stress][f"{col}_reason"].value_counts(normalize=True)
+    return {"score": SCORES[col], "dataset": name, "setting": setting, "comparison": comparison, "n_people": len(per),
             "score_calm": per[False].mean(), "score_stress": per[True].mean(),
             "people_lower_in_stress": int((per[True] < per[False]).sum()),
             "p_value": wilcoxon(per[True], per[False]).pvalue if len(per) >= 6 else np.nan,
@@ -66,7 +69,7 @@ def evaluate(name: str, s: pd.DataFrame, setting: str) -> dict:
 
 
 def plot(res: pd.DataFrame):
-    res = res.sort_values("mean_auc").reset_index(drop=True)
+    res = res[res.score == SCORES["bodysync"]].sort_values("mean_auc").reset_index(drop=True)
     fig, ax = plt.subplots(figsize=(8.5, 0.6 * len(res) + 1.5))
     y = np.arange(len(res))
     ax.hlines(y, res.score_stress, res.score_calm, color="#bbb", lw=3)
@@ -84,21 +87,39 @@ def plot(res: pd.DataFrame):
     plt.close(fig)
 
 
+def plot_a_vs_b(res: pd.DataFrame):
+    auc = res.pivot(index="dataset", columns="score", values="mean_auc").sort_values(SCORES["bodysync"])
+    fig, ax = plt.subplots(figsize=(8, 0.45 * len(auc) + 1.5))
+    y = np.arange(len(auc))
+    ax.barh(y + 0.2, auc[SCORES["sync"]], height=0.38, color="#9e9e9e", label="A: sync")
+    ax.barh(y - 0.2, auc[SCORES["bodysync"]], height=0.38, color="#00a896", label="B: BodySync")
+    ax.axvline(0.5, color="k", lw=0.8, ls="--")
+    ax.set_yticks(y, auc.index)
+    ax.set_xlim(0.3, 1.0)
+    ax.set_xlabel("Within-person AUC, stress vs calm (0.5 = chance)")
+    ax.set_title("Which score drops under stress?")
+    ax.legend(loc="lower right")
+    fig.tight_layout()
+    fig.savefig(FIGURES / "fig5_sync_vs_bodysync.png", dpi=150)
+    plt.close(fig)
+
+
 def main():
     rows, ex = [], []
     for name, (w, setting) in load_all().items():
         s = score(w, setting)
-        rows.append(evaluate(name, s, setting))
+        rows += [evaluate(name, s, setting, col) for col in SCORES]
         if s.label.isin(["aerobic", "anaerobic"]).any():
-            ex.append(s.groupby("label").bodysync.median().round(1).rename(name))
+            ex.append(s.groupby("label")[list(SCORES)].median().round(1).rename(columns=SCORES))
     res = pd.DataFrame(rows)
     res.to_csv(RESULTS / "datasets_stress_vs_calm.csv", index=False)
     print(res.round(3).to_string(index=False))
     if ex:
-        ex = pd.concat(ex, axis=1)
+        ex = pd.concat(ex)
         ex.to_csv(RESULTS / "datasets_exercise_vs_stress.csv")
         print("\nMedian score by condition (exercise dataset)\n", ex.to_string())
     plot(res)
+    plot_a_vs_b(res)
 
 
 if __name__ == "__main__":

@@ -38,6 +38,8 @@ Label rule (survey intervals only; there are no button tags):
 Cleaning: HR outside 35-200 bpm, TEMP outside 20-42 C and EDA < 0 set missing.
 move = SD of the ACC vector magnitude (g) over the window's samples.
 coverage = share of the 300 s having HR, EDA and TEMP; keep coverage >= 0.75.
+r_hr_eda / r_hr_temp / r_eda_temp = within-window Pearson r of the per-second
+signals (seconds with both present; NaN if < 50% usable or a signal is flat).
 """
 import io
 import zipfile
@@ -54,7 +56,8 @@ OUT = ROOT / "data" / "processed" / "ext_nurse_windows.parquet"
 TZ = "America/Chicago"
 WIN = 300
 CALM_GAP = 60 * 60
-COLS = ["pid", "start", "label", "normal", "hr_mean", "eda_mean", "temp_mean", "move", "coverage"]
+COLS = ["pid", "start", "label", "normal", "hr_mean", "eda_mean", "temp_mean", "move", "coverage",
+        "r_hr_eda", "r_hr_temp", "r_eda_temp"]
 
 
 def read_e4(zf, name):
@@ -77,6 +80,19 @@ def per_second(start, fs, x):
     m = idx.max() + 1
     return (sec[0] + np.arange(m), np.bincount(idx[ok], weights=x[ok], minlength=m),
             np.bincount(idx[ok], minlength=m))
+
+
+def corr(win, x, y):
+    """Per-window Pearson r of per-second x and y over seconds where both exist.
+    NaN if < 50% of the window's seconds are usable or either series is flat."""
+    ok = np.isfinite(x) & np.isfinite(y)
+    d = pd.DataFrame({"win": win[ok], "x": x[ok], "y": y[ok]})
+    g = d.groupby("win")
+    dx, dy = d["x"] - g["x"].transform("mean"), d["y"] - g["y"].transform("mean")
+    s = pd.DataFrame({"win": d["win"], "xy": dx * dy, "xx": dx ** 2, "yy": dy ** 2}).groupby("win").sum()
+    flat = (g["x"].max() == g["x"].min()) | (g["y"].max() == g["y"].min())
+    r = s["xy"] / np.sqrt(s["xx"] * s["yy"])
+    return r.where((g.size() >= 0.5 * WIN) & ~flat)
 
 
 def load_session(path):
@@ -139,6 +155,10 @@ def windows(pdir):
     else:
         w["move"] = np.nan
     w["coverage"] = g["full"] / WIN
+    hr, eda, tmp = (sec[f"{k}_s"].to_numpy() / sec[f"{k}_n"].replace(0, np.nan).to_numpy()
+                    for k in ("hr", "eda", "temp"))
+    for col, x, y in (("r_hr_eda", hr, eda), ("r_hr_temp", hr, tmp), ("r_eda_temp", eda, tmp)):
+        w[col] = corr(sec["win"].to_numpy(), x, y).reindex(w.index)
     return w[w["coverage"] >= 0.75].copy()
 
 

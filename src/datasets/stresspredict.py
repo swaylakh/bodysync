@@ -25,6 +25,7 @@ S01 is irregular: its logged baseline (09:39-09:43) lies after Stroop+relax.
 Windows: 2 min sliding by 30 s on a grid of epoch multiples of 30 s, 1-s
 resolution; a window gets a phase's label if >= 90% of its seconds lie in that
 phase, otherwise it is dropped. `start` is naive UTC.
+r_hr_eda / r_hr_temp / r_eda_temp = Pearson r of the per-second series inside the window.
 Signals: HR.csv (1 Hz), EDA.csv / TEMP.csv (4 Hz), ACC.csv (32 Hz, 1/64 g).
 """
 import os
@@ -78,6 +79,17 @@ def per_second(path, lo=None, hi=None, mag=False):
     return df.groupby("s").agg(sum=("v", "sum"), sq=("v2", "sum"), n=("v", "size"))
 
 
+def corr(a, b, win):
+    """Pearson r of two per-second series (NaN = missing); NaN if < 50% usable or flat."""
+    ok = ~np.isnan(a) & ~np.isnan(b)
+    if ok.sum() < 0.5 * win:
+        return np.nan
+    a, b = a[ok], b[ok]
+    if a.std() == 0 or b.std() == 0:
+        return np.nan
+    return float(np.corrcoef(a, b)[0, 1])
+
+
 def phase_table(sid, row):
     date = pd.Timestamp(row[25])
 
@@ -107,12 +119,13 @@ def subject(sid, phases):
         return np.concatenate([[0.0], np.cumsum(a)])
 
     # per-second means for HR/EDA/TEMP, then window mean of available seconds
-    sig = {}
+    sig, sec = {}, {}
     have = np.ones(n, bool)
     for k, df in (("hr", hr), ("eda", eda), ("temp", tmp)):
         s, c = col(df, "sum"), col(df, "n")
         m = np.divide(s, c, out=np.zeros(n), where=c > 0)
         sig[k] = (csum(m), csum(c > 0))
+        sec[k] = np.where(c > 0, m, np.nan)
         have &= c > 0
     cov_c = csum(have)
     a_sum, a_sq, a_n = csum(col(acc, "sum")), csum(col(acc, "sq")), csum(col(acc, "n"))
@@ -140,6 +153,8 @@ def subject(sid, phases):
         for key, (cs, cn) in sig.items():
             nn = cn[j] - cn[i]
             r[f"{key}_mean"] = (cs[j] - cs[i]) / nn if nn else np.nan
+        for x, y in (("hr", "eda"), ("hr", "temp"), ("eda", "temp")):
+            r[f"r_{x}_{y}"] = corr(sec[x][i:j], sec[y][i:j], WIN)
         an = a_n[j] - a_n[i]
         if an > 1:
             mu = (a_sum[j] - a_sum[i]) / an
@@ -161,7 +176,8 @@ def main():
             continue
         rows += subject(sid, phase_table(sid, row))
     df = pd.DataFrame(rows)[["pid", "start", "label", "task", "normal", "hr_mean", "eda_mean",
-                             "temp_mean", "move", "coverage"]]
+                             "temp_mean", "move", "coverage",
+                             "r_hr_eda", "r_hr_temp", "r_eda_temp"]]
     df["start"] = df["start"].astype("datetime64[ns]")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     df.to_parquet(OUT, index=False)

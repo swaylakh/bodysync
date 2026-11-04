@@ -8,6 +8,7 @@ Checks:
     normal for everything they would look "stressed"
   - sleep: is the next-day (08-22h) score lower after nights with more wake-ups
     (stage 102), more time awake or less sleep? Each person compared with themselves.
+    Run for both scores (A sync, B BodySync).
 """
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,10 +40,10 @@ def nights(clean: pd.DataFrame) -> pd.DataFrame:
     return n.reset_index()
 
 
-def sleep_check(s: pd.DataFrame) -> pd.DataFrame:
+def sleep_check(s: pd.DataFrame, col: str) -> pd.DataFrame:
     n = nights(pd.read_parquet(PROCESSED / "clean.parquet"))
     day = s[s.start.dt.hour.between(8, 21)].assign(night=lambda d: d.start.dt.normalize())
-    day = day.groupby(["pid", "night"]).agg(score=("bodysync", "mean"), k=("bodysync", "size"))
+    day = day.groupby(["pid", "night"]).agg(score=(col, "mean"), k=(col, "size"))
     m = n.merge(day[day.k >= 8].reset_index(), on=["pid", "night"])
     m = m[m.groupby("pid").pid.transform("size") >= 4]
     rows = []
@@ -50,7 +51,7 @@ def sleep_check(s: pd.DataFrame) -> pd.DataFrame:
         med = m.groupby("pid")[measure].transform("median")
         bad = m[measure] < med if bad_is_low else m[measure] > med
         per = m.assign(bad=bad).groupby(["pid", "bad"]).score.mean().unstack().dropna()
-        rows.append({"bad_night_means": measure, "n_people": len(per), "score_after_bad": per[True].mean(),
+        rows.append({"score": col, "bad_night_means": measure, "n_people": len(per), "score_after_bad": per[True].mean(),
                      "score_after_good": per[False].mean(), "people_lower_after_bad": int((per[True] < per[False]).sum()),
                      "p_value": wilcoxon(per[True], per[False]).pvalue})
     return pd.DataFrame(rows)
@@ -67,7 +68,7 @@ def plot_week(s: pd.DataFrame):
     ax.plot(g.start, g.bodysync.rolling(4, min_periods=1).mean(), color="#222", lw=0.8)
     lowest = g.loc[g.groupby(g.start.dt.date).bodysync.idxmin()].nsmallest(3, "bodysync")   # one per day, no overlap
     for _, r in lowest.iterrows():
-        ax.annotate(r.main_reason, (r.start, r.bodysync), xytext=(0, -14), textcoords="offset points",
+        ax.annotate(r.bodysync_reason, (r.start, r.bodysync), xytext=(0, -14), textcoords="offset points",
                     ha="center", fontsize=7, color="#b00")
     ax.set_ylim(0, 102)
     ax.set_ylabel("BodySync score")
@@ -87,7 +88,7 @@ def main():
                        "one_normal_for_all": naive.bodysync}).groupby("situation").median().round(1)
     ex.to_csv(RESULTS / "zupwd_exercise_check.csv")
     print("Median score by situation\n", ex.to_string())
-    sl = sleep_check(s)
+    sl = pd.concat([sleep_check(s.dropna(subset=[c]), c) for c in ("sync", "bodysync")])
     sl.to_csv(RESULTS / "zupwd_sleep_check.csv", index=False)
     print("\nSleep check\n", sl.round(3).to_string(index=False))
     plot_week(s)

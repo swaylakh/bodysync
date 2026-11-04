@@ -4,7 +4,9 @@ A 0–100 score for how far your body is from **your own normal** right now, fro
 
 ## The score
 
-`src/bodysync.py`
+`src/bodysync.py` computes two candidate scores the same way, so they can be compared:
+- **Score A, sync:** the original idea. Do heart rate, sweat and temperature *move together* as usual? Its inputs are the Pearson r of each signal pair inside the window, and a change in either direction counts.
+- **Score B, BodySync:** the final score, described in the steps below.
 
 1. **Per window:** take the average heart rate, sweat (log scale) and skin temperature.
 2. **Find the person's normal for the same situation.** In ZU-PWD the watch reports the situation (asleep / resting / active / other). Normal is that person's median, and their typical spread (MAD), across all their windows in that situation. If a situation has fewer than 10 windows, the person's overall normal is used instead. Comparing exercise with the person's own exercise stops a workout from looking like stress.
@@ -38,7 +40,7 @@ How high or low the signals are carries the information, not how they move toget
 `src/validate_zupwd.py`
 
 - **Exercise:** with situation-aware normals, the median score while active is 78.6, the same as other situations (76–79). With one normal for everything, it drops to 62.8 and exercise looks like stress.
-- **Sleep:** the next-day score is no lower after nights with more wake-ups, more time awake or less sleep (12 people, all p ≥ .42).
+- **Sleep:** neither score is lower on the day after nights with more wake-ups, more time awake or less sleep (12 people, all p ≥ .42).
 - **Stress can't be tested here:** the free copy of the data has no stress labels.
 
 ### Seven public Empatica stress datasets
@@ -47,26 +49,28 @@ How high or low the signals are carries the information, not how they move toget
 
 AUC = how well a lower score picks out a person's stress windows from their calm ones (0.5 = chance). Lab datasets compare stress with *later* rest, not with the baseline that set the normal. For the nurse dataset, stress intervals were first flagged by the authors' sweat detector. The fair test there compares flagged intervals where the nurse felt stressed with flagged intervals where they didn't.
 
-| Dataset | Citations* | Setting | People | AUC | Lower in stress |
-|---|---|---|---|---|---|
-| WESAD (Schmidt 2018) | 1,352 | lab | 15 | **0.78** | 12 of 15 (p = .004) |
-| Nurse stress (Hosseini 2022, *Sci Data*) | 119 | hospital shifts | 11 | 0.52 | 7 of 11 (p = .77) |
-| Stress-Predict (Iqbal 2023) | 75 | lab | 35 | 0.54 | 19 of 35 (p = .34) |
-| Stress + exercise (Hongn 2025, *Sci Data*) | 37 | lab | 35 | 0.60 | 21 of 35 (p = .016) |
-| EmpaticaE4Stress (2024, *Data in Brief*) | 26 | lab | 29 | 0.92† | 28 of 29 |
-| ADARP (Sah 2022) | 13 | daily life | 11 | 0.45 | 4 of 11 (p = .24) |
-| CAN-STRESS (2025) | 1 | daily life | 27 | 0.54 | 18 of 27 (p = .49) |
+| Dataset | Citations* | Setting | People | A: sync AUC | B: BodySync AUC | Lower in stress (B) |
+|---|---|---|---|---|---|---|
+| WESAD (Schmidt 2018) | 1,352 | lab | 15 | 0.46 | **0.78** | 12 of 15 (p = .004) |
+| Nurse stress (Hosseini 2022, *Sci Data*) | 119 | hospital shifts | 11 | 0.52 | 0.52 | 7 of 11 (p = .77) |
+| Stress-Predict (Iqbal 2022, *Sensors*) | 113 | lab | 35 | 0.48 | 0.54 | 19 of 35 (p = .34) |
+| Stress + exercise (Hongn 2025, *Sci Data*) | 37 | lab | 35 | 0.49 | 0.60 | 21 of 35 (p = .016) |
+| EmpaticaE4Stress (Campanella 2024, *Data in Brief*) | 26 | lab | 29 | 0.90† | 0.92† | 28 of 29 |
+| ADARP (Sah 2022) | 13 | daily life | 11 | 0.48 | 0.45 | 4 of 11 (p = .24) |
+| CAN-STRESS (Rahimi Azghan 2025) | 1 | daily life | 27 | 0.52 | 0.54 | 18 of 27 (p = .49) |
 
-\* OpenAlex, October 2026.
+\* OpenAlex, November 2026.
 † Weaker test: this dataset has no later rest, so stress is compared with the baseline that set the normal.
 
 **Exercise in the stress + exercise dataset:** cycling scores lower (median 17) than the stress tasks (45). Lab sessions have no "exercising normal" to compare with, unlike ZU-PWD.
 
 ![all datasets](figures/fig4_all_datasets.png)
+![sync vs BodySync](figures/fig5_sync_vs_bodysync.png)
 
 ### Conclusion
 
-- **The score catches acute stress on WESAD,** the field's standard benchmark, and weakly on the other lab datasets.
+- **The sync score (A) is at chance on every fair test,** including WESAD.
+- **BodySync (B) catches acute stress on WESAD,** the field's standard benchmark, and weakly on the other lab datasets.
 - **On everyday stress (nurses, ADARP, CAN-STRESS) it is at chance.** Average heart rate, sweat and temperature look the same in moments people reported as stressful and in calm ones. This matches the well-known problem that wearable stress detection rarely carries over to new datasets.
 - **So BodySync measures "how different is your body from your normal"**: it catches strong physical stress responses, but it isn't an everyday stress detector.
 
@@ -93,7 +97,8 @@ python src/run_all.py              # ZU-PWD pipeline + scoring of all converted 
 | Does coupling beat levels? | `src/coupling_test.py` |
 | The score | `src/bodysync.py` |
 | Score on ZU-PWD: exercise and sleep checks, fig 3 | `src/validate_zupwd.py` |
-| Score on all external datasets, fig 4 | `src/validate_datasets.py` |
+| Both scores on all external datasets, figs 4–5 | `src/validate_datasets.py` |
+| Report tables + single-file Overleaf version | `report/make_tables.py` (after compiling `report/main.tex`) |
 
 ### Getting the data
 
@@ -117,7 +122,8 @@ Each loader's docstring explains its file layout and labelling rules. They all w
 ```
 src/            pipeline; src/datasets/ has one loader per external dataset
 results/        result tables
-figures/        fig1 typical day, fig2 coupling by state, fig3 example week, fig4 all datasets
-docs/           paper summary, related work, slides
+figures/        fig1 typical day, fig2 coupling by state, fig3 example week, fig4 all datasets, fig5 sync vs BodySync
+report/         LaTeX report (main.tex, refs.bib); overleaf.tex is the same report as one file
+docs/           paper summary, related work, slides (plan + results decks)
 data/           datasets (not in git)
 ```
