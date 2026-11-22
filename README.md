@@ -1,6 +1,6 @@
 # BodySync
 
-A 0–100 score for how far your body is from **your own normal** right now, from wrist heart rate, sweat (EDA) and skin temperature. 100 means exactly your normal; lower means further away in the stressed direction. Built on everyday Empatica EmbracePlus data (ZU-PWD '25) and tested on 7 public Empatica E4 stress datasets.
+A 0–100 score for how far your body is from **your own normal** right now, from wrist heart rate, sweat (EDA) and skin temperature. 100 means exactly your normal; lower means further away in the stressed direction. Built on everyday Empatica EmbracePlus data (ZU-PWD '25) and tested on 8 public Empatica E4 stress datasets.
 
 ## Final system (final presentation)
 
@@ -19,7 +19,7 @@ A 0–100 score for how far your body is from **your own normal** right now, fro
 
 | Locked test people | People | First version (formula + bursts) | Trained model (start) | **Final** |
 |---|---|---|---|---|
-| WESAD | 6 | 0.99 | 0.98 | **1.00** |
+| WESAD | 6 | 0.99 | 0.98 | **0.99+** |
 | Stress + exercise | 14 | 0.60 | 0.67 | **0.91** |
 | Stress-Predict | 14 | 0.64 | 0.67 | **0.90** |
 | CAN-STRESS | 10 | 0.61 | 0.59 | **0.67** |
@@ -36,6 +36,18 @@ Notes:
 - **Trained only on other datasets,** v2 gets WESAD 0.74 on the locked people. The change-over-10-min features don't transfer well between studies.
 
 ![final](figures/fig6_final.png)
+
+### A brand-new dataset: real driving (AffectiveROAD)
+
+Added after the system was frozen; nothing was tuned on it (`src/new_datasets.py`, run once; `results/new_datasets.csv`). AffectiveROAD (El Haouij et al., ACM SAC 2018, MIT Media Lab, 125 citations) has 9 drivers and 13 real drives, with an Empatica E4 on each wrist and 15 min of rest before and after. City segments count as stress, the last rest as calm and the first rest as the normal (`src/datasets/affectiveroad.py`). The dataset's own continuous stress rating agrees: city 0.70–0.84, highway about 0.5.
+
+| AffectiveROAD (all 9 drivers are new) | First version | Final, trained on the other drivers | Final, never saw this dataset |
+|---|---|---|---|
+| City vs resting afterwards | 0.83 | **0.92** (9/9 drivers lower) | 0.67 |
+| City vs highway (both driving) | 0.73 | 0.61 | **0.76** |
+| Shuffled labels | | 0.55 | |
+
+BIG IDEAS (Duke, PhysioNet) was also checked. It has 10 days of E4 data per person but no stress labels (it's a glucose study), so it can't test stress detection.
 
 ## The score
 
@@ -166,6 +178,8 @@ python src/run_all.py              # ZU-PWD pipeline + scoring of all converted 
 | Score on ZU-PWD: exercise and sleep checks, fig 3 | `src/validate_zupwd.py` |
 | Both scores on all external datasets, figs 4–5 | `src/validate_datasets.py` |
 | Sweat bursts, HRV and a trained model on the lab datasets | `src/feature_test.py` |
+| Final push: locked split, iteration log, locked test | `src/final_eval.py` |
+| Frozen system on a brand-new dataset (AffectiveROAD) | `src/new_datasets.py` |
 | Report tables + single-file Overleaf version | `report/make_tables.py` (after compiling `report/main.tex`) |
 
 ### Getting the data
@@ -182,6 +196,7 @@ The datasets aren't in this repo because of their size and licences.
 | Stress + exercise | https://physionet.org/content/wearable-device-dataset/1.0.1/ | `data/external/stressexercise/` |
 | Stress-Predict | https://github.com/italha-d/Stress-Predict-Dataset | `data/external/stresspredict/` |
 | EmpaticaE4Stress | https://doi.org/10.17632/kb42z77m2g.2 | `data/external/e4stress/` |
+| AffectiveROAD | https://www.media.mit.edu/groups/affective-computing/data/ | `data/external/affectiveroad/` |
 
 Each loader's docstring explains its file layout and labelling rules. They all write the common format in `src/datasets/SPEC.md`.
 

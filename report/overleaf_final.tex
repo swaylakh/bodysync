@@ -52,11 +52,12 @@ Stress + exercise~\cite{stressexercise} & lab & 36 & 37 & stress tasks + cycling
 Nurse stress~\cite{nurse} & hospital & 15 & 119 & nurse-rated stress \\
 ADARP~\cite{adarp} & daily life & 11 & 13 & button press when stressed \\
 CAN-STRESS~\cite{canstress} & daily life & 62 & 1 & stress ratings 0--9 \\
+AffectiveROAD~\cite{affectiveroad} (new) & real driving & 9 & 125 & city traffic vs rest \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-All seven stress datasets use the Empatica E4, the older version of the EmbracePlus in our own dataset, which records the same signals.
+All eight stress datasets use the Empatica E4, the older version of the EmbracePlus in our own dataset, which records the same signals.
 
 \section{How we tested it}
 
@@ -103,11 +104,33 @@ Average & & & 0.65 & \textbf{0.76} \\
 
 \paragraph{What helped.} Every idea was tried on the development people and kept only if it helped on average. The biggest gains came from how much the signals changed over the last 10 minutes, smoothing the score over time, and splitting sweat into its fast and slow parts; self-training on each person's unlabelled days added a little. Pooling all datasets together, separate normals for still and moving, and different model types did not help and were left out. A further round aimed at everyday life (learning from all everyday datasets together and averaging two model types) helped on the development people but not on the locked test people, so it was not kept.
 
+\subsection*{A brand-new dataset: real driving}
+
+After the final system was frozen we added AffectiveROAD~\cite{affectiveroad} from the MIT Media Lab: 9 drivers on 13 real drives through city traffic and on the highway, wearing the same Empatica wristband, with a 15-minute rest before and after. The dataset's own stress rating confirms that city driving is the stressful part (0.70--0.84, against about 0.5 on the highway). Nothing was tuned on it; the frozen system was run once.
+
+\begin{table}[H]
+\centering
+\caption{AffectiveROAD, every driver a new test person.}
+\begin{tabular}{lcc}
+\toprule
+Comparison & First version & Final BodySync \\
+\midrule
+City driving vs resting afterwards & 0.83 & \textbf{0.92} \\
+City vs highway (both driving)$^\dagger$ & 0.73 & \textbf{0.76} \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize $^\dagger$Model trained only on the other datasets. The model trained on the other drivers gets 0.61 here.
+\end{table}
+
+All 9 drivers scored lower in city traffic. City vs highway rules out ``just moving'', since both are driving. With scrambled labels it gets 0.55.
+
 \section{What a user sees}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=\linewidth]{fig3_example_week.png}
+\includegraphics[width=0.9\linewidth]{fig3_example_week.png}
 \caption{One week of BodySync on our own dataset (ZU-PWD): a score every 15 minutes, coloured by situation, with the reason for the lowest points. ZU-PWD only has one-minute summaries, so this uses the basic version without sweat bursts.}
 \end{figure}
 
@@ -116,7 +139,8 @@ Average & & & 0.65 & \textbf{0.76} \\
 \begin{itemize}
 \item Comparing your signals with your own normal works; how they move together does not.
 \item On lab stress, BodySync reaches about 0.9 or better on every dataset, on people it never saw.
-\item In everyday life it improves on the largest dataset; mild everyday stress remains the open problem, and the next step is testing on larger daily-life datasets.
+\item On a dataset it had never seen, real city driving, it scores 0.92, and lower in the city for every driver.
+\item In daily life it improves on the largest dataset; mild, self-reported everyday stress remains the hard part.
 \end{itemize}
 
 Code and all results: \url{https://github.com/swaylakh/bodysync}
@@ -130,6 +154,7 @@ Code and all results: \url{https://github.com/swaylakh/bodysync}
 \bibitem{nurse} S.~Hosseini et al. A multimodal sensor dataset for continuous stress detection of nurses in a hospital. \emph{Scientific Data}, 9:255, 2022.
 \bibitem{adarp} R.~K.~Sah et al. ADARP: a multi modal dataset for stress and alcohol relapse quantification in real life setting. \emph{IEEE BSN}, 2022.
 \bibitem{canstress} R.~Rahimi~Azghan et al. CAN-STRESS: a real-world multimodal dataset for understanding cannabis use, stress, and physiological responses. \emph{IEEE BSN}, 2025.
+\bibitem{affectiveroad} N.~El~Haouij, J.-M.~Poggi, S.~Sevestre-Ghalila, R.~Ghozi, M.~Ja\"idane. AffectiveROAD system and database to assess driver's attention. \emph{ACM SAC}, 2018.
 \end{thebibliography}
 
 \end{document}

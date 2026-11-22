@@ -168,7 +168,8 @@ def smooth(allw: pd.DataFrame, score: pd.Series) -> pd.Series:
 
 
 def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool = False,
-        eval_set: str = "all", datasets: list[str] = DATASETS, quality_eval: bool = False) -> pd.DataFrame:
+        eval_set: str = "all", datasets: list[str] = DATASETS, quality_eval: bool = False,
+        eval_relabel: dict | None = None) -> pd.DataFrame:
     """Each person in `group` is scored by a model trained on the other people (DEV only when testing)."""
     allw = allw.copy()
     if shuffle:   # credibility check: shuffle each person's labels, keeping their stress/calm counts
@@ -225,6 +226,8 @@ def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool = Fals
         if quality_eval:
             m &= eda_on
         s = allw[m].assign(v=score[m], v_reason="")
+        if eval_relabel:   # a different comparison at test time only (training labels unchanged)
+            s["label"] = s.label.replace(eval_relabel)
         rows.append(evaluate(name, s, allw.loc[m, "setting"].iloc[0], "v"))
     return pd.DataFrame(rows)
 

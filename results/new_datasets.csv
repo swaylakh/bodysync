@@ -1,0 +1,9 @@
+score,dataset,setting,comparison,n_people,score_calm,score_stress,people_lower_in_stress,p_value,mean_auc,people_auc_above_0.5,top_reason_in_stress,system
+v,affectiveroad,lab,stress vs calm/rest,9,58.80863770962032,39.34152430447695,8,0.0078125,0.8312976462769553,8,sweat bursts high (39%),formula: BodySync + bursts
+v,affectiveroad,lab,stress vs calm/rest,9,77.8840424194112,25.173371381698995,9,0.00390625,0.8895490488485505,9, (100%),"trained model (start of final push), new people"
+v,affectiveroad,lab,stress vs calm/rest,9,83.94492816547462,22.619582067269935,9,0.00390625,0.9201609062193233,9, (100%),"FINAL BodySync, new people"
+v,affectiveroad,lab,stress vs calm/rest,9,42.94952452605832,35.52611406574562,7,0.1640625,0.6729005113045637,8, (100%),"FINAL BodySync, new dataset (never saw it)"
+v,affectiveroad,lab,stress vs calm/rest,9,53.22674812581298,51.72542559542956,6,0.1640625,0.5486096962523113,7, (100%),"FINAL, shuffled labels (should be ~0.5)"
+v,affectiveroad,lab,city vs highway (both driving),9,47.20804593230657,39.34152430447695,8,0.0078125,0.7334481514504128,8,sweat bursts high (39%),formula: BodySync + bursts
+v,affectiveroad,lab,city vs highway (both driving),9,31.98876667464081,22.619582067269935,6,0.25,0.6133736656817683,7, (100%),"FINAL BodySync, new people"
+v,affectiveroad,lab,city vs highway (both driving),9,55.218640165257995,35.52611406574562,8,0.0078125,0.7548430950044501,9, (100%),"FINAL BodySync, new dataset (never saw it)"
