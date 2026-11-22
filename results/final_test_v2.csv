@@ -1,0 +1,19 @@
+score,dataset,setting,comparison,n_people,score_calm,score_stress,people_lower_in_stress,p_value,mean_auc,people_auc_above_0.5,top_reason_in_stress,system
+v,wesad,lab,stress vs calm/rest,6,94.96864035642619,16.029243075397712,6,0.03125,0.9988242210464433,6, (100%),FINAL v2
+v,stressexercise,lab,stress vs calm/rest,14,91.7762475130437,45.13665714915377,12,0.0008544921875,0.9226660526350222,14, (100%),FINAL v2
+v,stresspredict,lab,stress vs calm/rest,14,66.63121772342183,26.310412345528732,14,0.0001220703125,0.902218154531992,14, (100%),FINAL v2
+v,nurse,free-living,felt stress vs flagged but not stressed,4,40.861003894822176,44.28298386068008,1,,0.45953520729036423,2, (100%),FINAL v2
+v,adarp,free-living,stress vs calm/rest,4,56.21802811812717,53.13583947129858,4,,0.5866061830571484,4, (100%),FINAL v2
+v,canstress,free-living,stress vs calm/rest,10,52.56364996089759,43.65177111361213,8,0.01953125,0.6537269734001939,8, (100%),FINAL v2
+v,wesad,lab,stress vs calm/rest,6,59.19328044838577,59.898648801689376,3,0.84375,0.4674279516650827,3, (100%),"FINAL v2, shuffled labels (should be ~0.5)"
+v,stressexercise,lab,stress vs calm/rest,14,72.84488858461312,73.46495527118243,7,0.7608642578125,0.47831967438421785,7, (100%),"FINAL v2, shuffled labels (should be ~0.5)"
+v,stresspredict,lab,stress vs calm/rest,14,52.01512320233111,51.46610028087557,9,0.2412109375,0.5211317226541586,9, (100%),"FINAL v2, shuffled labels (should be ~0.5)"
+v,nurse,free-living,felt stress vs flagged but not stressed,4,45.88338284770427,49.01706136902453,1,,0.36153772930358197,0, (100%),"FINAL v2, shuffled labels (should be ~0.5)"
+v,adarp,free-living,stress vs calm/rest,4,50.95762795189354,50.65878788348496,3,,0.516453325123142,3, (100%),"FINAL v2, shuffled labels (should be ~0.5)"
+v,canstress,free-living,stress vs calm/rest,10,46.798529851827276,46.20928255148259,4,1.0,0.5028125120286436,5, (100%),"FINAL v2, shuffled labels (should be ~0.5)"
+v,wesad,lab,stress vs calm/rest,6,58.39700641470022,41.08802165759211,6,0.03125,0.7371458282849336,6, (100%),"FINAL v2, trained on other datasets only"
+v,stressexercise,lab,stress vs calm/rest,14,55.39570442447742,40.35500532230554,11,0.0352783203125,0.6861452083148795,12, (100%),"FINAL v2, trained on other datasets only"
+v,stresspredict,lab,stress vs calm/rest,14,65.80347683881055,46.929695636826295,13,0.000244140625,0.6937971982390722,13, (100%),"FINAL v2, trained on other datasets only"
+v,nurse,free-living,felt stress vs flagged but not stressed,4,28.45215761416981,33.546262279124534,1,,0.4602211221686916,2, (100%),"FINAL v2, trained on other datasets only"
+v,adarp,free-living,stress vs calm/rest,4,52.2065433661051,50.30168252208399,3,,0.5429294098910661,3, (100%),"FINAL v2, trained on other datasets only"
+v,canstress,free-living,stress vs calm/rest,10,52.54028208999068,37.14850160761106,8,0.037109375,0.6504276195490785,8, (100%),"FINAL v2, trained on other datasets only"

@@ -76,7 +76,7 @@ All seven stress datasets use the Empatica E4, the older version of the EmbraceP
 \toprule
 Dataset & Setting & Test people & First version & Final BodySync \\
 \midrule
-WESAD & lab & 6 & 0.99 & \textbf{1.00} \\
+WESAD$^*$ & lab & 6 & 0.99 & \textbf{0.99+} \\
 Stress + exercise & lab & 14 & 0.60 & \textbf{0.91} \\
 Stress-Predict & lab & 14 & 0.64 & \textbf{0.90} \\
 CAN-STRESS & daily life & 10 & 0.61 & \textbf{0.67} \\
@@ -86,6 +86,9 @@ ADARP & daily life & 4 & 0.53 & 0.55 \\
 Average & & & 0.65 & \textbf{0.76} \\
 \bottomrule
 \end{tabular}
+
+\smallskip
+\footnotesize $^*$Six test people; WESAD's speech and mental-arithmetic stressor is very strong, so even the simple first version scores 0.99.
 \end{table}
 
 \begin{figure}[H]
@@ -98,7 +101,7 @@ Average & & & 0.65 & \textbf{0.76} \\
 
 \paragraph{Everyday life.} On CAN-STRESS, the largest daily-life dataset, BodySync improves from 0.61 to 0.67. The nurse and ADARP results stay close to a coin flip, but with four test people each they are too small to judge either way. Everyday stress is milder than a lab stress test and is only reported a few times a day, which makes it the hard part.
 
-\paragraph{What helped.} Every idea was tried on the development people and kept only if it helped on average. The biggest gains came from how much the signals changed over the last 10 minutes, smoothing the score over time, and splitting sweat into its fast and slow parts; self-training on each person's unlabelled days added a little. Pooling all datasets together, separate normals for still and moving, and different model types did not help and were left out.
+\paragraph{What helped.} Every idea was tried on the development people and kept only if it helped on average. The biggest gains came from how much the signals changed over the last 10 minutes, smoothing the score over time, and splitting sweat into its fast and slow parts; self-training on each person's unlabelled days added a little. Pooling all datasets together, separate normals for still and moving, and different model types did not help and were left out. A further round aimed at everyday life (learning from all everyday datasets together and averaging two model types) helped on the development people but not on the locked test people, so it was not kept.
 
 \section{What a user sees}
 

@@ -65,15 +65,23 @@ def score_variant(w: pd.DataFrame, setting: str, extra: dict, direction: dict) -
     return bodysync._score(w, names, spread, signs, context(w, setting), w["normal"].astype(bool), "v")
 
 
-def features(w: pd.DataFrame, change: bool, inputs: list[str] = INPUTS, context: bool = False) -> pd.DataFrame:
+def features(w: pd.DataFrame, change: bool, inputs: list[str] = INPUTS, context: bool | str = False) -> pd.DataFrame:
     """Each input as distance from the person's own normal, in typical spreads (no labels used).
-    context=True: separate normals for the person's still and moving windows (falls back to the
-    person's overall normal where a context has no normal windows)."""
+    context: separate normals per person and
+      "move" (or True): still vs moving windows
+      "hour": time of day (night / morning / afternoon / evening, 6-hour blocks)
+      "day":  calendar day, so slow day-to-day drift is not counted
+    falling back to the person's overall normal where a context has fewer than 10 normal windows."""
     ref = w[w["normal"]].groupby("pid")[inputs]
     med = ref.median().reindex(w.pid).to_numpy()
     spr = ref.agg(bodysync.mad).reindex(w.pid).to_numpy()
     if context:
-        key = w.pid + np.where(w["move"] > w.groupby("pid")["move"].transform("median"), "|moving", "|still")
+        if context == "hour":
+            key = w.pid + "|" + (w.start.dt.hour // 6).astype("Int64").astype(str)
+        elif context == "day":
+            key = w.pid + "|" + w.start.dt.date.astype(str)
+        else:
+            key = w.pid + np.where(w["move"] > w.groupby("pid")["move"].transform("median"), "|moving", "|still")
         cref = w[w["normal"]].groupby(key[w["normal"]])[inputs]
         cmed, cspr = cref.median().reindex(key).to_numpy(), cref.agg(bodysync.mad).reindex(key).to_numpy()
         ok = ~np.isnan(cmed) & (cref.size().reindex(key).to_numpy() >= 10)[:, None]

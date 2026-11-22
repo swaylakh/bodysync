@@ -43,18 +43,24 @@ CALIB_N = 3
 CALIB_WEIGHT = 10
 CALIB_GAP = {"lab": pd.Timedelta(minutes=2), "free-living": pd.Timedelta(minutes=30)}
 SMOOTH = {"lab": "2min", "free-living": "15min"}
+PSEUDO_SHARE = 0.1      # self-training: each person's most / least stressed-looking 10% of unlabelled windows
 BASE = {"change": False, "calib": False, "smooth": False, "pooled": False, "shape": False,
-        "context": False, "quality": False, "selftrain": False, "model": "xgb", "blend": False}
+        "context": False, "quality": False, "selftrain": False, "model": "xgb", "blend": False,
+        "lookback": False, "pool_life": False, "life_model": None, "lab_helper": 0.0, "pseudo": PSEUDO_SHARE,
+        "other_datasets": False}
+LOOKBACK = "15min"
 MODELS = {   # round 4 candidates; "xgb" is the model used in rounds 1-3
     "xgb": dict(n_estimators=200, max_depth=3, learning_rate=0.05),
     "xgb_shallow": dict(n_estimators=300, max_depth=2, learning_rate=0.05),
     "xgb_deep": dict(n_estimators=400, max_depth=5, learning_rate=0.03),
 }
 EDA_OFF = 0.01          # uS; mean sweat at or below this = sensor not on the skin
-PSEUDO_SHARE = 0.1      # self-training: each person's most / least stressed-looking 10% of unlabelled windows
 MIN_CALIB_PEOPLE = 5
 # Frozen after round 4 (rounds 3 and 4 each gained < 0.01 on DEV, which ends iteration)
 FINAL = {**BASE, "change": True, "smooth": True, "shape": True, "selftrain": True}
+# v2, frozen after round 7 (everyday-life push, rounds 5-7 on DEV). Its locked-test run is the
+# SECOND look at the TEST people, which the report states.
+FINAL_V2 = {**FINAL, "pool_life": True, "lab_helper": 0.3, "pseudo": 0.2, "life_model": "xgb+logistic"}
 
 
 def make_split(data: dict) -> pd.DataFrame:
@@ -92,15 +98,25 @@ def prepare() -> tuple[pd.DataFrame, dict, dict]:
 
 
 class LazyX(dict):
-    """Feature tables per (change, shape, context), built the first time a variant needs them."""
+    """Feature tables per (change, shape, context, lookback), built the first time a variant needs them.
+    lookback: in everyday-life datasets, each distance-from-normal input is averaged over the past
+    LOOKBACK (everyday stress builds slowly); lab datasets are left as they are."""
     def __init__(self, data: dict):
         super().__init__()
         self.data = data
 
     def __missing__(self, key):
-        ch, sh, cx = key
-        self[key] = pd.concat([features(w, ch, INPUTS + SHAPE if sh else INPUTS, cx) for w, _ in self.data.values()],
-                              ignore_index=True)
+        ch, sh, cx, lb = key
+        parts = []
+        for w, setting in self.data.values():
+            f = features(w, ch, INPUTS + SHAPE if sh else INPUTS, cx)
+            if lb and setting == "free-living":
+                z = [c for c in f.columns if c.startswith("z_")]
+                for _, idx in w.dropna(subset=["start"]).groupby("pid").groups.items():
+                    g = w.loc[idx].sort_values("start")
+                    f.loc[g.index, z] = f.loc[g.index, z].set_axis(g.start).rolling(LOOKBACK).mean().to_numpy()
+            parts.append(f)
+        self[key] = pd.concat(parts, ignore_index=True)
         return self[key]
 
 
@@ -120,13 +136,18 @@ def calibration(allw: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
 
 
 def fit_score(X: pd.DataFrame, allw: pd.DataFrame, train: np.ndarray, extra: np.ndarray, test: np.ndarray,
-              y_all: pd.Series | None = None, extra_weight: float = CALIB_WEIGHT, model: str = "xgb") -> np.ndarray:
+              y_all: pd.Series | None = None, extra_weight: float = CALIB_WEIGHT, model: str = "xgb",
+              lab_weight: float = 1.0) -> np.ndarray:
     """XGBoost on train (+ extra rows, e.g. calibration, at extra_weight); returns a score, lower = stressed."""
     rows = train | extra
     y = (allw.y if y_all is None else y_all)[rows]
     weight = compute_sample_weight("balanced", y) / allw[rows].groupby("dataset").dataset.transform("size").to_numpy()
     weight = weight / weight.mean()
     weight[extra[rows]] *= extra_weight
+    weight[allw.dataset[rows].isin(LAB).to_numpy()] *= lab_weight
+    if model == "xgb+logistic":   # average of the two models' scores
+        return np.mean([fit_score(X, allw, train, extra, test, y_all, extra_weight, m, lab_weight)
+                        for m in ("xgb", "logistic")], axis=0)
     if model == "logistic":
         clf = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000))
         clf.fit(X[rows].fillna(0), y, logisticregression__sample_weight=weight)
@@ -161,7 +182,7 @@ def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool = Fals
             new[(y == 0) & (g.y.to_numpy() == 0)] = g.label[(y == 0) & (g.y.to_numpy() == 0)]
             allw.loc[g.index, "y"] = y
             allw.loc[g.index, "label"] = new
-    Xc = X[(cfg["change"], cfg["shape"], cfg["context"])]
+    Xc = X[(cfg["change"], cfg["shape"], cfg["context"], cfg["lookback"])]
     eda_on = allw.eda_mean > EDA_OFF
     trainable = allw.labelled & (allw.group == "dev") & (eda_on if cfg["quality"] else True)
     score = pd.Series(np.nan, index=allw.index)
@@ -169,20 +190,29 @@ def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool = Fals
         for pid in allw.loc[(allw.dataset == name) & (allw.group == group), "pid"].unique():
             me = ((allw.dataset == name) & (allw.pid == pid)).to_numpy()
             pool = allw.dataset == name if not cfg["pooled"] else allw.dataset.isin(DATASETS)
+            life = name in LIFE
+            if cfg["pool_life"] and life:   # everyday datasets learn from all everyday datasets
+                pool = allw.dataset.isin(LIFE)
+            if cfg["lab_helper"] and life:  # ... plus the lab datasets at a low weight
+                pool = pool | allw.dataset.isin(LAB)
+            if cfg["other_datasets"]:       # stricter test: never train on the test person's dataset
+                pool = allw.dataset.isin(DATASETS) & (allw.dataset != name)
+            model = (cfg["life_model"] or cfg["model"]) if life else cfg["model"]
+            fit = dict(model=model, lab_weight=cfg["lab_helper"] if life else 1.0)
             train = (trainable & pool).to_numpy() & ~me
             extra = me & allw.calib.to_numpy() if cfg["calib"] else np.zeros(len(allw), bool)
-            s = fit_score(Xc, allw, train, extra, me, model=cfg["model"])
+            s = fit_score(Xc, allw, train, extra, me, **fit)
             if cfg["selftrain"]:   # adapt to this person with their own unlabelled windows
                 unl = np.where(me & ~allw.labelled.to_numpy())[0]
                 if len(unl) >= 20:
                     su = pd.Series(s, index=np.where(me)[0])[unl]
-                    k = max(1, int(PSEUDO_SHARE * len(unl)))
+                    k = max(1, int(cfg["pseudo"] * len(unl)))
                     lo, hi = su.nsmallest(k).index, su.nlargest(k).index
                     pseudo = np.zeros(len(allw), bool)
                     pseudo[lo] = pseudo[hi] = True
                     y_ps = allw.y.copy()
                     y_ps.iloc[lo], y_ps.iloc[hi] = 1, 0
-                    s = fit_score(Xc, allw, train | extra, pseudo, me, y_ps, extra_weight=1.0, model=cfg["model"])
+                    s = fit_score(Xc, allw, train | extra, pseudo, me, y_ps, extra_weight=1.0, **fit)
             score[me] = s
     if cfg["blend"]:   # average with the hand-made BodySync formula (+ sweat bursts), same 0-100 scale
         score = 0.5 * score + 0.5 * allw["formula"]
@@ -239,6 +269,20 @@ def final_test(allw: pd.DataFrame, X: dict, data: dict):
     res.to_csv(RESULTS / "final_test.csv", index=False)
 
 
+def final_test_v2(allw: pd.DataFrame, X: dict):
+    """Second look at the LOCKED TEST people, for v2 (everyday-life push). Models trained on DEV only."""
+    out = []
+    def add(name, res):
+        out.append(res.assign(system=name))
+        r = res.set_index("dataset").mean_auc.reindex(DATASETS)
+        print(f"{name:52s}", " ".join(f"{v:.3f}" for v in r), f"| mean {r.mean():.3f}")
+    print(" " * 52, " ".join(DATASETS))
+    add("FINAL v2", run(FINAL_V2, allw, X, "test"))
+    add("FINAL v2, shuffled labels (should be ~0.5)", run(FINAL_V2, allw, X, "test", shuffle=True))
+    add("FINAL v2, trained on other datasets only", run({**FINAL_V2, "other_datasets": True}, allw, X, "test"))
+    pd.concat(out, ignore_index=True).to_csv(RESULTS / "final_test_v2.csv", index=False)
+
+
 def plot_final():
     """figures/fig6_final.png: locked-test AUC per dataset, original formula vs start vs final."""
     import matplotlib.pyplot as plt
@@ -283,6 +327,7 @@ def main():
     ap.add_argument("--split-only", action="store_true")
     ap.add_argument("--round", type=int)
     ap.add_argument("--final", action="store_true", help="score the frozen system once on LOCKED TEST people")
+    ap.add_argument("--final-v2", action="store_true", help="second, disclosed look: v2 on LOCKED TEST people")
     args = ap.parse_args()
     if args.split_only:
         data = {name: load(name) for name in LAB + LIFE}
@@ -293,6 +338,9 @@ def main():
     print(allw[allw.group == "dev"].groupby("dataset").agg(people=("pid", "nunique"), calib=("calib", "sum"), later=("later", "sum")).to_string())
     if args.final:
         final_test(allw, X, data)
+        return
+    if args.final_v2:
+        final_test_v2(allw, X)
         return
     if args.round == 1:
         log("1", "formula: BodySync + bursts (reference)", formula(allw, data, "dev"))
@@ -328,6 +376,22 @@ def main():
         for m in ("xgb_shallow", "xgb_deep", "logistic"):
             log("4", f"model: {m}", run({**BASE, **kept, "model": m}, allw, X, "dev"))
         log("4", "+ blend with BodySync formula", run({**BASE, **kept, "blend": True}, allw, X, "dev"))
+    if args.round == 5:   # round 5: everyday life; kept if the everyday average rises and no lab set drops > 0.03
+        log("5", "final system", run(FINAL, allw, X, "dev"))
+        log("5", "+ time-of-day normal", run({**FINAL, "context": "hour"}, allw, X, "dev"))
+        log("5", "+ same-day normal", run({**FINAL, "context": "day"}, allw, X, "dev"))
+        log("5", "+ 15-min lookback (everyday)", run({**FINAL, "lookback": True}, allw, X, "dev"))
+        log("5", "+ everyday datasets pooled (everyday)", run({**FINAL, "pool_life": True}, allw, X, "dev"))
+    if args.round == 6:   # round 6: more everyday ideas on top of round 5
+        r5 = {**FINAL, "pool_life": True}
+        log("6", "round-5 system", run(r5, allw, X, "dev"))
+        log("6", "+ logistic model for everyday data", run({**r5, "life_model": "logistic"}, allw, X, "dev"))
+        log("6", "+ lab data as a low-weight helper (0.3)", run({**r5, "lab_helper": 0.3}, allw, X, "dev"))
+        log("6", "+ stronger self-training (20%)", run({**r5, "pseudo": 0.2}, allw, X, "dev"))
+    if args.round == 7:   # round 7: stack the round-6 keepers, then average xgb + logistic for everyday data
+        r6 = {**FINAL, "pool_life": True, "lab_helper": 0.3, "pseudo": 0.2}
+        log("7", "round-6 stack (helper + stronger self-training)", run(r6, allw, X, "dev"))
+        log("7", "+ xgb & logistic averaged (everyday)", run({**r6, "life_model": "xgb+logistic"}, allw, X, "dev"))
 
 
 if __name__ == "__main__":

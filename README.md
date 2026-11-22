@@ -31,6 +31,9 @@ Notes:
 - **Leak check:** with each person's labels shuffled, the final system scores 0.51.
 - **Personal calibration** (a few "stressed? yes/no" answers) helped on DEV but not on the locked people (0.84 → 0.83), so it is not part of the final system.
 - **EmpaticaE4Stress** is left out: its only calm windows are the baseline that sets the normal.
+- **WESAD** reads 0.99+ because its 6 test people face a very strong stressor; even the simple first version gets 0.99.
+- **v2, an everyday-life push** (rounds 5–7 on DEV: pool the everyday datasets, lab data as a low-weight helper, stronger self-training, averaging XGBoost with logistic regression) raised the everyday DEV average from 0.613 to 0.637. On a second, disclosed look at the locked people (`results/final_test_v2.csv`) it did not hold up: nurses 0.46, ADARP 0.59, CAN-STRESS 0.65, everyday average 0.567 vs 0.573 for v1. So **v1 stays the final system**.
+- **Trained only on other datasets,** v2 gets WESAD 0.74 on the locked people. The change-over-10-min features don't transfer well between studies.
 
 ![final](figures/fig6_final.png)
 
