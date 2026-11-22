@@ -24,8 +24,7 @@ from validate_datasets import evaluate
 NEW = ["affectiveroad"]
 feature_test.LAB.extend(NEW)   # fixed-route protocol with a baseline rest -> lab window format
 
-import final_eval  # noqa: E402  (after LAB is extended; final_eval shares the same list)
-from final_eval import BASE, FINAL, prepare, run  # noqa: E402
+from final_eval import BASE, FINAL, prepare, run  # noqa: E402  (after LAB is extended; same list object)
 
 STRICT = {"affectiveroad": ({"highway": "calm", "rest": "later_rest"}, "city vs highway (both driving)")}
 

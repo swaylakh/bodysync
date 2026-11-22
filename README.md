@@ -4,7 +4,9 @@ A 0–100 score for how far your body is from **your own normal** right now, fro
 
 ## Final system (final presentation)
 
-`src/final_eval.py`. The deck is `docs/slides/BodySync_Final.pptx` and the report is `report/overleaf_final.tex` (it needs `figures/fig6_final.png` and `figures/fig3_example_week.png`).
+`src/final_eval.py`. The deck is `docs/slides/BodySync_Final.pptx` and the report is `report/overleaf_final.tex`, compiled as `report/overleaf_final.pdf`. For Overleaf, upload `figures/fig6_final.png` and `figures/fig3_example_week.png` with it.
+
+The sections after "The score" record the earlier stages: the sync idea, the first formula, and the richer features. Their numbers come from before the final push.
 
 **What it does:**
 1. **Your normal**, per situation.
@@ -90,7 +92,7 @@ How high or low the signals are carries the information, not how they move toget
 - **Sleep:** neither score is lower on the day after nights with more wake-ups, more time awake or less sleep (12 people, all p ≥ .42).
 - **Stress can't be tested here:** the free copy of the data has no stress labels.
 
-### Seven public Empatica stress datasets
+### Seven public Empatica stress datasets (first version of the score)
 
 `src/validate_datasets.py`, one loader per dataset in `src/datasets/`.
 
@@ -146,12 +148,13 @@ The trained models are tested two ways:
 - **Caveat:** many variants were tested, so single p-values near .05 should be read with caution.
 - **HRV** adds little: wrist-pulse HRV is noisy.
 
-### Conclusion
+### What this stage showed (before the final push)
 
 - **The sync score (A) is at chance on every fair test,** including WESAD.
 - **BodySync (B) catches acute stress on WESAD,** the field's standard benchmark, and weakly on the other lab datasets.
 - **On everyday stress (nurses, ADARP, CAN-STRESS) it is at chance.** Average heart rate, sweat and temperature look the same in moments people reported as stressful and in calm ones. This matches the well-known problem that wearable stress detection rarely carries over to new datasets.
 - **So BodySync measures "how different is your body from your normal"**: it catches strong physical stress responses, but it isn't an everyday stress detector.
+- The final system (top of this page) later raised lab results to about 0.9 on every dataset and CAN-STRESS to 0.67, and scored 0.92 on unseen real driving.
 
 ## Limitations
 
@@ -166,6 +169,9 @@ The trained models are tested two ways:
 pip install -r requirements.txt
 python src/datasets/<name>.py      # once per downloaded dataset (see below)
 python src/run_all.py              # ZU-PWD pipeline + scoring of all converted datasets
+python src/feature_test.py         # richer features + trained model
+python src/final_eval.py --round N # final push on DEV people (N = 1, 11, 2-7); --final = locked test
+python src/new_datasets.py         # frozen system on AffectiveROAD
 ```
 
 | Step | File |
@@ -206,7 +212,7 @@ Each loader's docstring explains its file layout and labelling rules. They all w
 src/            pipeline; src/datasets/ has one loader per external dataset
 results/        result tables
 figures/        fig1 typical day, fig2 coupling by state, fig3 example week, fig4 all datasets, fig5 sync vs BodySync, fig6 final locked-test results
-report/         LaTeX report (main.tex, refs.bib); overleaf.tex = full report as one file, overleaf_update.tex = shorter lab-only progress report
-docs/           paper summary, related work, slides (plan deck, full results deck, shorter update deck)
+report/         overleaf_final.tex/.pdf = final 4-page report; main.tex (+ refs.bib, tables/) = full earlier report, overleaf.tex = the same as one file; archive/ = progress report
+docs/           paper summary, related work; slides/BodySync_Final.pptx = final deck, slides/archive/ = earlier weekly and progress decks
 data/           datasets (not in git)
 ```
