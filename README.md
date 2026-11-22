@@ -2,6 +2,38 @@
 
 A 0–100 score for how far your body is from **your own normal** right now, from wrist heart rate, sweat (EDA) and skin temperature. 100 means exactly your normal; lower means further away in the stressed direction. Built on everyday Empatica EmbracePlus data (ZU-PWD '25) and tested on 7 public Empatica E4 stress datasets.
 
+## Final system (final presentation)
+
+`src/final_eval.py`. The deck is `docs/slides/BodySync_Final.pptx` and the report is `report/overleaf_final.tex` (it needs `figures/fig6_final.png` and `figures/fig3_example_week.png`).
+
+**What it does:**
+1. **Your normal**, per situation.
+2. **Stress signals measured against it:** sweat bursts, fast vs slow sweat, in-window trends, and change over the last 10 min.
+3. **A trained XGBoost model** that adapts to each person through self-training on their unlabelled windows.
+4. **A smoothed score.**
+
+**How it was tested:**
+- **Locked split:** before iterating, 40% of people in each dataset were locked away (`results/final_split.csv`, committed first).
+- **Iteration:** every idea was tried on the other 60% and logged in `results/iteration_log.csv`. An idea was kept only if it raised the average and dropped no dataset by more than 0.03. Iteration stopped after two rounds with gains under 0.01.
+- **The frozen system** was then scored once on the locked people (`results/final_test.csv`).
+
+| Locked test people | People | First version (formula + bursts) | Trained model (start) | **Final** |
+|---|---|---|---|---|
+| WESAD | 6 | 0.99 | 0.98 | **1.00** |
+| Stress + exercise | 14 | 0.60 | 0.67 | **0.91** |
+| Stress-Predict | 14 | 0.64 | 0.67 | **0.90** |
+| CAN-STRESS | 10 | 0.61 | 0.59 | **0.67** |
+| Nurse stress | 4 | 0.52 | 0.44 | 0.50 |
+| ADARP | 4 | 0.53 | 0.48 | 0.55 |
+| **Average** | | 0.65 | 0.64 | **0.76** |
+
+Notes:
+- **Leak check:** with each person's labels shuffled, the final system scores 0.51.
+- **Personal calibration** (a few "stressed? yes/no" answers) helped on DEV but not on the locked people (0.84 → 0.83), so it is not part of the final system.
+- **EmpaticaE4Stress** is left out: its only calm windows are the baseline that sets the normal.
+
+![final](figures/fig6_final.png)
+
 ## The score
 
 `src/bodysync.py` computes two candidate scores the same way, so they can be compared:
@@ -155,7 +187,7 @@ Each loader's docstring explains its file layout and labelling rules. They all w
 ```
 src/            pipeline; src/datasets/ has one loader per external dataset
 results/        result tables
-figures/        fig1 typical day, fig2 coupling by state, fig3 example week, fig4 all datasets, fig5 sync vs BodySync
+figures/        fig1 typical day, fig2 coupling by state, fig3 example week, fig4 all datasets, fig5 sync vs BodySync, fig6 final locked-test results
 report/         LaTeX report (main.tex, refs.bib); overleaf.tex = full report as one file, overleaf_update.tex = shorter lab-only progress report
 docs/           paper summary, related work, slides (plan deck, full results deck, shorter update deck)
 data/           datasets (not in git)

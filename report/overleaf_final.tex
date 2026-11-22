@@ -1,0 +1,132 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}{./}}
+
+\title{BodySync: A Personal Stress Score from Your Wristband}
+\author{Swayam Lakhotia \and Bhavya Bajaj \and Ananya Khaitan}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\section{The idea}
+
+Wristbands like the Empatica record heart rate, sweat (EDA) and skin temperature all day. Sun et al.~\cite{sun2026trust} showed that these signals react when people are under pressure, but analysed each signal separately, in a single lab session. \textbf{BodySync} turns them into one 0--100 score for everyday use: 100 means your body is at \emph{its own} normal, and lower means it is reacting the way it does under stress.
+
+Everyone's normal is different, so BodySync compares you only with yourself, and with yourself in the same situation (asleep, resting or active), so that a workout is compared with your other workouts rather than with you sitting still.
+
+\section{What we tried first}
+
+Our first version asked whether the signals \emph{move together} the way they usually do (``sync''). For every 30 minutes we measured how strongly each pair of signals rises and falls together. This carried almost no information: given only sync, a model told asleep, resting and active apart 37\% of the time (random guessing: 33\%), and it did not pick out lab stress on WESAD (0.46, where 0.5 is a coin flip). How far the signals are from a person's own normal worked much better, so the final BodySync is built on that.
+
+\section{How BodySync works}
+
+\begin{enumerate}
+\item \textbf{Your normal.} Each person's usual heart rate, sweat and temperature, per situation.
+\item \textbf{Stress signals,} measured against that normal: sweat bursts (small, fast spikes in sweat, which jump from about 2 to about 10 per minute under stress), the fast and slow parts of the sweat signal, whether heart rate and temperature are rising or falling, and how much each changed over the last 10 minutes.
+\item \textbf{A trained model} combines these, then adapts to each person using their own unlabelled days (self-training).
+\item \textbf{The score} is smoothed over the last few minutes, since stress lasts minutes, not seconds.
+\end{enumerate}
+
+\section{Data}
+
+\begin{table}[h]
+\centering
+\caption{Datasets. Citation counts from OpenAlex, November 2026.}
+\begin{tabular}{llrrl}
+\toprule
+Dataset & Setting & People & Citations & Stress label \\
+\midrule
+ZU-PWD '25~\cite{zupwd} (ours) & daily life & 27 & -- & none (used for the demo) \\
+WESAD~\cite{wesad} & lab & 15 & 1{,}352 & speech + maths test \\
+Stress-Predict~\cite{stresspredict} & lab & 35 & 113 & Stroop test + interview \\
+Stress + exercise~\cite{stressexercise} & lab & 36 & 37 & stress tasks + cycling \\
+Nurse stress~\cite{nurse} & hospital & 15 & 119 & nurse-rated stress \\
+ADARP~\cite{adarp} & daily life & 11 & 13 & button press when stressed \\
+CAN-STRESS~\cite{canstress} & daily life & 62 & 1 & stress ratings 0--9 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All seven stress datasets use the Empatica E4, the older version of the EmbracePlus in our own dataset, which records the same signals.
+
+\section{How we tested it}
+
+\begin{itemize}
+\item \textbf{Locked test people.} Before building the final system we set aside 40\% of the people in every dataset. All improvements were developed on the other 60\%, and the locked group was used once, at the very end. All results below are on them.
+\item \textbf{Unseen people only.} Each test person is scored by a model that never saw their labels.
+\item \textbf{The number.} For each person: take one stressed moment and one calm moment; how often does the stressed one score lower? 0.5 is a coin flip and 1 means always (the within-person AUC).
+\item \textbf{Leak check.} With each person's stress labels scrambled, the final model scores 0.51 on average, a coin flip, so the gains are not an artefact.
+\end{itemize}
+
+\section{Results}
+
+\begin{table}[h]
+\centering
+\caption{Locked test people: how well each version picks out stress (0.5 = coin flip, 1 = always).}
+\begin{tabular}{llccc}
+\toprule
+Dataset & Setting & Test people & First version & Final BodySync \\
+\midrule
+WESAD & lab & 6 & 0.99 & \textbf{1.00} \\
+Stress + exercise & lab & 14 & 0.60 & \textbf{0.91} \\
+Stress-Predict & lab & 14 & 0.64 & \textbf{0.90} \\
+CAN-STRESS & daily life & 10 & 0.61 & \textbf{0.67} \\
+Nurse stress & hospital & 4 & 0.52 & 0.50 \\
+ADARP & daily life & 4 & 0.53 & 0.55 \\
+\midrule
+Average & & & 0.65 & \textbf{0.76} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{fig6_final.png}
+\caption{Locked test people, per dataset: the first version of BodySync, the trained model before the final improvements, and the final system.}
+\end{figure}
+
+\paragraph{Lab stress.} The final BodySync picks out stress about 90\% of the time or better on every lab dataset, up from about 0.6 on the two harder ones. On Stress-Predict, all 14 test people scored lower under stress.
+
+\paragraph{Everyday life.} On CAN-STRESS, the largest daily-life dataset, BodySync improves from 0.61 to 0.67. The nurse and ADARP results stay close to a coin flip, but with four test people each they are too small to judge either way. Everyday stress is milder than a lab stress test and is only reported a few times a day, which makes it the hard part.
+
+\paragraph{What helped.} Every idea was tried on the development people and kept only if it helped on average. The biggest gains came from how much the signals changed over the last 10 minutes, smoothing the score over time, and splitting sweat into its fast and slow parts; self-training on each person's unlabelled days added a little. Pooling all datasets together, separate normals for still and moving, and different model types did not help and were left out.
+
+\section{What a user sees}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{fig3_example_week.png}
+\caption{One week of BodySync on our own dataset (ZU-PWD): a score every 15 minutes, coloured by situation, with the reason for the lowest points. ZU-PWD only has one-minute summaries, so this uses the basic version without sweat bursts.}
+\end{figure}
+
+\section{Takeaways}
+
+\begin{itemize}
+\item Comparing your signals with your own normal works; how they move together does not.
+\item On lab stress, BodySync reaches about 0.9 or better on every dataset, on people it never saw.
+\item In everyday life it improves on the largest dataset; mild everyday stress remains the open problem, and the next step is testing on larger daily-life datasets.
+\end{itemize}
+
+Code and all results: \url{https://github.com/swaylakh/bodysync}
+
+\begin{thebibliography}{9}
+\bibitem{sun2026trust} X.~Sun, R.~Ma, S.~Wei, P.~Cesar, J.~A.~Bosch, A.~El~Ali. Understanding trust toward human versus AI-generated health information through behavioral and physiological sensing. \emph{International Journal of Human-Computer Studies}, 209:103714, 2026.
+\bibitem{zupwd} Evangelista et al. Zayed University Physiological Wellness Dataset 2025 (ZU-PWD '25). IEEE DataPort, 2025. doi:10.21227/2tth-wj12.
+\bibitem{wesad} P.~Schmidt, A.~Reiss, R.~D\"urichen, C.~Marberger, K.~Van~Laerhoven. Introducing WESAD, a multimodal dataset for wearable stress and affect detection. \emph{ICMI}, 2018.
+\bibitem{stresspredict} T.~Iqbal et al. Stress monitoring using wearable sensors: a pilot study and Stress-Predict dataset. \emph{Sensors}, 22(21):8135, 2022.
+\bibitem{stressexercise} A.~Hongn, F.~Bosch, L.~E.~Prado, J.~M.~Ferr\'andez~Vicente, M.~P.~Bonomini. Wearable physiological signals under acute stress and exercise conditions. \emph{Scientific Data}, 12:520, 2025.
+\bibitem{nurse} S.~Hosseini et al. A multimodal sensor dataset for continuous stress detection of nurses in a hospital. \emph{Scientific Data}, 9:255, 2022.
+\bibitem{adarp} R.~K.~Sah et al. ADARP: a multi modal dataset for stress and alcohol relapse quantification in real life setting. \emph{IEEE BSN}, 2022.
+\bibitem{canstress} R.~Rahimi~Azghan et al. CAN-STRESS: a real-world multimodal dataset for understanding cannabis use, stress, and physiological responses. \emph{IEEE BSN}, 2025.
+\end{thebibliography}
+
+\end{document}

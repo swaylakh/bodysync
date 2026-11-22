@@ -239,6 +239,32 @@ def final_test(allw: pd.DataFrame, X: dict, data: dict):
     res.to_csv(RESULTS / "final_test.csv", index=False)
 
 
+def plot_final():
+    """figures/fig6_final.png: locked-test AUC per dataset, original formula vs start vs final."""
+    import matplotlib.pyplot as plt
+    from config import FIGURES
+    names = {"wesad": "WESAD", "stressexercise": "Stress +\nexercise", "stresspredict": "Stress-\nPredict",
+             "canstress": "CAN-STRESS", "nurse": "Nurses", "adarp": "ADARP"}
+    systems = {"formula: BodySync + bursts": ("Original formula", "#b8c2cc"),
+               "trained model (start of final push)": ("Trained model (start)", "#6c8091"),
+               "FINAL BodySync": ("Final BodySync", "#00a896")}
+    r = pd.read_csv(RESULTS / "final_test.csv").pivot(index="dataset", columns="system", values="mean_auc").loc[list(names)]
+    fig, ax = plt.subplots(figsize=(9, 4))
+    x = np.arange(len(names))
+    for i, (key, (label, color)) in enumerate(systems.items()):
+        ax.bar(x + (i - 1) * 0.27, r[key], width=0.26, color=color, label=label)
+    ax.axhline(0.5, color="k", lw=0.8, ls="--")
+    ax.set_xticks(x, list(names.values()))
+    ax.set_ylim(0.3, 1.02)
+    ax.set_ylabel("Picks out stress (0.5 = coin flip)")
+    ax.set_title("Locked test people: how well each version picks out stress")
+    ax.legend(loc="upper right", fontsize=9)
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(FIGURES / "fig6_final.png", dpi=160)
+    plt.close(fig)
+
+
 def log(round_: str, idea: str, res: pd.DataFrame):
     r = res.set_index("dataset").reindex(DATASETS)
     auc = r.mean_auc.round(3)
