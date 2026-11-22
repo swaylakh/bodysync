@@ -10,6 +10,7 @@ from pulse peaks), then cut into 2-min windows sliding by 30 s, per src/datasets
 A window gets a condition if at least 90% of its seconds are in it. normal = baseline.
 r_hr_eda, r_hr_temp, r_eda_temp: Pearson r of the two 1-s series inside each window.
 scr_rate, scr_amp, rmssd_ms: sweat bursts from the raw 4 Hz EDA and HRV from pulse peaks (see richer.py).
+eda_phasic, eda_tonic_slope, hr_slope, temp_slope: fast/slow sweat parts and trends (see richer.py).
 """
 import pickle
 import zipfile
@@ -19,7 +20,7 @@ import numpy as np
 import pandas as pd
 from scipy.signal import butter, filtfilt, find_peaks
 
-from richer import eda_bursts, rmssd
+from richer import eda_bursts, eda_phasic_tonic, rmssd, slope_per_min
 
 ROOT = Path(__file__).resolve().parents[2]
 ZIP = ROOT / "data" / "wesad" / "WESAD.zip"
@@ -84,7 +85,10 @@ def windows(sig: pd.DataFrame, eda: np.ndarray, beats: np.ndarray, pid: str) -> 
             continue
         cond = CONDITIONS[vals[counts.argmax()]]
         part = sig.iloc[sl]
-        scr_rate, scr_amp = eda_bursts(eda[start * EDA_HZ:(start + WIN) * EDA_HZ])
+        raw_eda = eda[start * EDA_HZ:(start + WIN) * EDA_HZ]
+        scr_rate, scr_amp = eda_bursts(raw_eda)
+        phasic, tonic_slope = eda_phasic_tonic(raw_eda)
+        secs = np.arange(WIN, dtype=float)
         in_win = (beats >= start) & (beats < start + WIN)
         ibi = np.diff(beats)[in_win[1:] & in_win[:-1]]
         rows.append({"pid": f"wesad_{pid}", "start": pd.Timestamp(0) + pd.Timedelta(seconds=start),
@@ -93,7 +97,10 @@ def windows(sig: pd.DataFrame, eda: np.ndarray, beats: np.ndarray, pid: str) -> 
                      "move": part.mag_sd.mean(), "coverage": 1.0,
                      "r_hr_eda": pearson(part.hr, part.eda), "r_hr_temp": pearson(part.hr, part.temp),
                      "r_eda_temp": pearson(part.eda, part.temp),
-                     "scr_rate": scr_rate, "scr_amp": scr_amp, "rmssd_ms": rmssd(ibi)})
+                     "scr_rate": scr_rate, "scr_amp": scr_amp, "rmssd_ms": rmssd(ibi),
+                     "eda_phasic": phasic, "eda_tonic_slope": tonic_slope,
+                     "hr_slope": slope_per_min(part.hr.to_numpy(), secs),
+                     "temp_slope": slope_per_min(part.temp.to_numpy(), secs)})
     return pd.DataFrame(rows)
 
 

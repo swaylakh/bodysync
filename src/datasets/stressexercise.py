@@ -54,6 +54,7 @@ Windows: 2 min sliding 30 s from each file's start, 1-s resolution; label if
 r_hr_eda / r_hr_temp / r_eda_temp = Pearson r of the per-second series inside the window.
 scr_rate / scr_amp / rmssd_ms = richer.eda_bursts on the raw 4 Hz EDA samples in the window
 and richer.rmssd on the IBI.csv beats in the window (NaN if IBI.csv is empty: ANAEROBIC S01, or corrupt: STRESS S02).
+eda_phasic / eda_tonic_slope = richer.eda_phasic_tonic on the same raw EDA; hr_slope / temp_slope = richer.slope_per_min on the per-second HR / TEMP.
 Run from project root: python src/datasets/stressexercise.py
 """
 import os
@@ -63,7 +64,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from richer import eda_bursts, rmssd  # noqa: E402
+from richer import eda_bursts, eda_phasic_tonic, rmssd, slope_per_min  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(ROOT, "data", "external", "stressexercise", "Wearable_Dataset")
@@ -224,7 +225,10 @@ def session_rows(session, sid):
         move = np.sqrt(max(tot[1] / tot[2] - (tot[0] / tot[2]) ** 2, 0)) if tot[2] else np.nan
         for x, y in (("hr", "eda"), ("hr", "temp"), ("eda", "temp")):
             out[f"r_{x}_{y}"] = corr(sec[x][sl], sec[y][sl], WIN)
-        scr_rate, scr_amp = eda_bursts(e[(e_time >= s) & (e_time < s + WIN)], 4)
+        e_win = e[(e_time >= s) & (e_time < s + WIN)]
+        scr_rate, scr_amp = eda_bursts(e_win, 4)
+        eda_phasic, eda_tonic_slope = eda_phasic_tonic(e_win, 4)
+        t_win = np.arange(WIN, dtype=float)
         rows.append({
             "pid": pid, "start": t0 + pd.Timedelta(seconds=s), "label": p[2],
             "normal": p[2] == "baseline", "hr_mean": out["hr"], "eda_mean": out["eda"],
@@ -234,6 +238,9 @@ def session_rows(session, sid):
             "sprint_s": int(spr[sl].sum()),
             "scr_rate": scr_rate, "scr_amp": scr_amp,
             "rmssd_ms": rmssd(b_ibi[(b_time >= s) & (b_time < s + WIN)]),
+            "eda_phasic": eda_phasic, "eda_tonic_slope": eda_tonic_slope,
+            "hr_slope": slope_per_min(sec["hr"][sl], t_win),
+            "temp_slope": slope_per_min(sec["temp"][sl], t_win),
         })
     return rows
 

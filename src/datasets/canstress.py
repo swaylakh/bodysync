@@ -28,6 +28,7 @@ the raw 32 Hz samples in the window.
 signals (seconds with both present; NaN if < 50% usable or a signal is flat).
 ``scr_rate`` / ``scr_amp`` / ``rmssd_ms`` = richer.eda_bursts on the raw 4 Hz EDA samples in the
 window and richer.rmssd on the IBI.csv beats whose time falls in the window.
+``eda_phasic`` / ``eda_tonic_slope`` / ``hr_slope`` / ``temp_slope`` = richer.eda_phasic_tonic on the same raw EDA slice and richer.slope_per_min on the window's per-second HR / TEMP (s since window start).
 
 Labels (ratings-based; replaces the SPEC "60 min away" calm rule)
 ----------------------------------------------------------------
@@ -56,7 +57,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from richer import eda_bursts, rmssd  # noqa: E402
+from richer import eda_bursts, eda_phasic_tonic, rmssd, slope_per_min  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(ROOT, "data", "external", "canstress", "CAN-STRESS")
@@ -160,6 +161,7 @@ def session_windows(path: str) -> pd.DataFrame:
     ibi_t, ibi = ibi_t[o], ibi[o]
 
     nw = n // WIN
+    rel = np.arange(WIN)
     rows = []
     for w in range(nw):
         a, b = w * WIN, (w + 1) * WIN
@@ -172,6 +174,7 @@ def session_windows(path: str) -> pd.DataFrame:
         e0, e1 = np.searchsorted(eda_t, [grid0 + a, grid0 + b])
         j0, j1 = np.searchsorted(ibi_t, [grid0 + a, grid0 + b])
         scr_rate, scr_amp = eda_bursts(eda[e0:e1], int(eda_fs))
+        eda_phasic, eda_tonic_slope = eda_phasic_tonic(eda[e0:e1], int(eda_fs))
         rows.append(dict(
             start_unix=grid0 + a,
             hr_mean=float(np.nanmean(h)), eda_mean=float(np.nanmean(e)),
@@ -180,6 +183,8 @@ def session_windows(path: str) -> pd.DataFrame:
             coverage=cov,
             r_hr_eda=_corr(h, e), r_hr_temp=_corr(h, t), r_eda_temp=_corr(e, t),
             scr_rate=scr_rate, scr_amp=scr_amp, rmssd_ms=rmssd(ibi[j0:j1]),
+            eda_phasic=eda_phasic, eda_tonic_slope=eda_tonic_slope,
+            hr_slope=slope_per_min(h, rel), temp_slope=slope_per_min(t, rel),
         ))
     return pd.DataFrame(rows)
 
@@ -226,7 +231,7 @@ def main():
     df["normal"] = True
     df = df[["pid", "start", "label", "normal", "hr_mean", "eda_mean", "temp_mean",
              "move", "coverage", "r_hr_eda", "r_hr_temp", "r_eda_temp", "scr_rate", "scr_amp", "rmssd_ms",
-             "cannabis_user", "session"]]
+             "eda_phasic", "eda_tonic_slope", "hr_slope", "temp_slope", "cannabis_user", "session"]]
     df = df.sort_values(["pid", "start"]).reset_index(drop=True)
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     df.to_parquet(OUT, index=False)

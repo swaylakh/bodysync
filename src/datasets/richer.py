@@ -5,8 +5,11 @@
     scr_rate: bursts per minute; scr_amp: mean burst size (uS, 0 if none)
 - HRV: rmssd_ms = root mean square of successive differences between heartbeats (ms).
   Stress usually lowers it.
+- Fast vs slow sweat: eda_phasic (size of the fast part), eda_tonic_slope (drift of the slow part).
+- Trends inside the window: hr_slope, temp_slope (per minute). Stress onset = rising HR,
+  falling skin temperature.
 
-Fixed before looking at any results: EDA low-pass 1 Hz, a burst = a peak with prominence
+Fixed before looking at any results: tonic/phasic split at 0.05 Hz; EDA low-pass 1 Hz, a burst = a peak with prominence
 >= 0.01 uS at least 1 s apart; beats outside 0.3-1.5 s are dropped; >= 20 beats needed.
 """
 import numpy as np
@@ -27,6 +30,26 @@ def eda_bursts(eda: np.ndarray, fs: int = EDA_HZ) -> tuple[float, float]:
     peaks, props = find_peaks(x, prominence=MIN_PROMINENCE, distance=fs)
     minutes = len(x) / fs / 60
     return len(peaks) / minutes, float(props["prominences"].mean()) if len(peaks) else 0.0
+
+
+def eda_phasic_tonic(eda: np.ndarray, fs: int = EDA_HZ) -> tuple[float, float]:
+    """Split EDA into its slow (tonic, < 0.05 Hz) and fast (phasic) parts.
+    eda_phasic: mean absolute phasic part (uS); eda_tonic_slope: tonic trend (uS per minute)."""
+    x = eda[~np.isnan(eda)]
+    if len(x) < 30 * fs:
+        return np.nan, np.nan
+    b, a = butter(2, 0.05, btype="low", fs=fs)
+    tonic = filtfilt(b, a, x, padlen=min(3 * max(len(a), len(b)), len(x) - 1))
+    minutes = np.arange(len(x)) / fs / 60
+    return float(np.abs(x - tonic).mean()), float(np.polyfit(minutes, tonic, 1)[0])
+
+
+def slope_per_min(values: np.ndarray, seconds: np.ndarray) -> float:
+    """Linear trend of a signal inside a window, per minute (NaN if fewer than half the samples)."""
+    m = ~np.isnan(values)
+    if m.sum() < 0.5 * len(values) or m.sum() < 10:
+        return np.nan
+    return float(np.polyfit(seconds[m] / 60, values[m], 1)[0])
 
 
 def rmssd(ibi_s: np.ndarray) -> float:

@@ -42,6 +42,7 @@ r_hr_eda / r_hr_temp / r_eda_temp = within-window Pearson r of the per-second
 signals (seconds with both present; NaN if < 50% usable or a signal is flat).
 scr_rate / scr_amp / rmssd_ms = richer.eda_bursts on the raw 4 Hz EDA samples in the window
 and richer.rmssd on the IBI.csv beats whose time falls in the window.
+eda_phasic / eda_tonic_slope / hr_slope / temp_slope = richer.eda_phasic_tonic on the same raw EDA slice and richer.slope_per_min on the window's per-second HR / TEMP (s since window start).
 """
 import io
 import os
@@ -53,7 +54,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from richer import eda_bursts, rmssd  # noqa: E402
+from richer import eda_bursts, eda_phasic_tonic, rmssd, slope_per_min  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 EXT = ROOT / "data" / "external" / "nurse"
@@ -64,7 +65,8 @@ TZ = "America/Chicago"
 WIN = 300
 CALM_GAP = 60 * 60
 COLS = ["pid", "start", "label", "normal", "hr_mean", "eda_mean", "temp_mean", "move", "coverage",
-        "r_hr_eda", "r_hr_temp", "r_eda_temp", "scr_rate", "scr_amp", "rmssd_ms"]
+        "r_hr_eda", "r_hr_temp", "r_eda_temp", "scr_rate", "scr_amp", "rmssd_ms",
+        "eda_phasic", "eda_tonic_slope", "hr_slope", "temp_slope"]
 
 
 def read_e4(zf, name):
@@ -185,12 +187,19 @@ def windows(pdir):
     et, ex, bt, bx = (np.concatenate([f[i] for f in loaded]) for i in range(1, 5))
     oe, ob = np.argsort(et, kind="stable"), np.argsort(bt, kind="stable")
     et, ex, bt, bx = et[oe], ex[oe], bt[ob], bx[ob]
+    secs, rel = sec.index.values, np.arange(WIN)
     rich = []
     for ws in w.index.values.astype(float):
         i0, i1 = np.searchsorted(et, [ws, ws + WIN])
         j0, j1 = np.searchsorted(bt, [ws, ws + WIN])
-        rich.append((*eda_bursts(ex[i0:i1]), rmssd(bx[j0:j1])))
-    w[["scr_rate", "scr_amp", "rmssd_ms"]] = np.array(rich, dtype=float).reshape(-1, 3)
+        k0, k1 = np.searchsorted(secs, [ws, ws + WIN])
+        off = (secs[k0:k1] - ws).astype(int)
+        hw, tw = np.full(WIN, np.nan), np.full(WIN, np.nan)
+        hw[off], tw[off] = hr[k0:k1], tmp[k0:k1]
+        rich.append((*eda_bursts(ex[i0:i1]), rmssd(bx[j0:j1]), *eda_phasic_tonic(ex[i0:i1]),
+                     slope_per_min(hw, rel), slope_per_min(tw, rel)))
+    new = ["scr_rate", "scr_amp", "rmssd_ms", "eda_phasic", "eda_tonic_slope", "hr_slope", "temp_slope"]
+    w[new] = np.array(rich, dtype=float).reshape(-1, len(new))
     return w
 
 

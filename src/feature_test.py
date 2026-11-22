@@ -32,8 +32,10 @@ VARIANTS = {
     "B + bursts": (BURSTS, {"scr_rate": 1, "scr_amp": 1}),
     "B + bursts + HRV": ({**BURSTS, **HRV}, {"scr_rate": 1, "scr_amp": 1, "rmssd_ms": -1}),
 }
-MIN_SPREAD = {"scr_rate": 0.5, "scr_amp": 0.005, "rmssd_ms": 5.0}
+MIN_SPREAD = {"scr_rate": 0.5, "scr_amp": 0.005, "rmssd_ms": 5.0,
+              "eda_phasic": 0.001, "eda_tonic_slope": 0.005, "hr_slope": 0.2, "temp_slope": 0.005}
 INPUTS = list(bodysync.LEVELS) + list(BURSTS) + list(HRV)
+SHAPE = ["eda_phasic", "eda_tonic_slope", "hr_slope", "temp_slope"]   # fast/slow sweat and in-window trends
 NON_STRESS = CALM | {"baseline", "no_stress"}
 CHANGE_LAG = pd.Timedelta(minutes=10)
 
@@ -43,7 +45,7 @@ def load(name: str) -> tuple[pd.DataFrame, str]:
     w = w[w.coverage >= 0.75].dropna(subset=["hr_mean", "eda_mean", "temp_mean"]).reset_index(drop=True)
     w["log_eda"] = np.log(w.eda_mean.clip(lower=0) + 0.01)
     w["start"] = pd.to_datetime(w["start"]).astype("datetime64[ns]")
-    for c in INPUTS:
+    for c in INPUTS + SHAPE:
         if c not in w:
             w[c] = np.nan
     return w.assign(dataset=name), "lab" if name in LAB else "free-living"
@@ -63,12 +65,21 @@ def score_variant(w: pd.DataFrame, setting: str, extra: dict, direction: dict) -
     return bodysync._score(w, names, spread, signs, context(w, setting), w["normal"].astype(bool), "v")
 
 
-def features(w: pd.DataFrame, change: bool) -> pd.DataFrame:
-    """Each input as distance from the person's own normal, in typical spreads (no labels used)."""
-    ref = w[w["normal"]].groupby("pid")[INPUTS]
-    med, spr = ref.median(), ref.agg(bodysync.mad)
-    floor = np.array([{**bodysync.LEVEL_MIN_SPREAD, **MIN_SPREAD}[c] for c in INPUTS])   # same guard as the score
-    z = (w[INPUTS] - med.reindex(w.pid).to_numpy()) / np.maximum(spr.reindex(w.pid).to_numpy(), floor)
+def features(w: pd.DataFrame, change: bool, inputs: list[str] = INPUTS, context: bool = False) -> pd.DataFrame:
+    """Each input as distance from the person's own normal, in typical spreads (no labels used).
+    context=True: separate normals for the person's still and moving windows (falls back to the
+    person's overall normal where a context has no normal windows)."""
+    ref = w[w["normal"]].groupby("pid")[inputs]
+    med = ref.median().reindex(w.pid).to_numpy()
+    spr = ref.agg(bodysync.mad).reindex(w.pid).to_numpy()
+    if context:
+        key = w.pid + np.where(w["move"] > w.groupby("pid")["move"].transform("median"), "|moving", "|still")
+        cref = w[w["normal"]].groupby(key[w["normal"]])[inputs]
+        cmed, cspr = cref.median().reindex(key).to_numpy(), cref.agg(bodysync.mad).reindex(key).to_numpy()
+        ok = ~np.isnan(cmed) & (cref.size().reindex(key).to_numpy() >= 10)[:, None]
+        med, spr = np.where(ok, cmed, med), np.where(ok, cspr, spr)
+    floor = np.array([{**bodysync.LEVEL_MIN_SPREAD, **MIN_SPREAD}[c] for c in inputs])   # same guard as the score
+    z = (w[inputs] - med) / np.maximum(spr, floor)
     z = z.add_prefix("z_")
     if not change:
         return z

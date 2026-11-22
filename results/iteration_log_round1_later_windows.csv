@@ -1,0 +1,7 @@
+﻿round,idea,wesad,stressexercise,stresspredict,nurse,adarp,canstress,mean,people
+1,formula: BodySync + bursts (reference),0.718,1.0,0.616,0.592,0.415,0.658,0.666,49
+1,base: trained,0.948,0.938,0.664,0.535,0.514,0.645,0.707,49
+1,+ change,0.949,1.0,0.744,0.519,0.524,0.582,0.72,49
+1,+ calibration,0.949,1.0,0.655,0.591,0.525,0.58,0.717,49
+1,+ smoothing,0.967,1.0,0.659,0.551,0.508,0.752,0.74,49
+1,+ pooled,0.917,1.0,0.704,0.576,0.515,0.772,0.747,49

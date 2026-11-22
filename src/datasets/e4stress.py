@@ -48,6 +48,7 @@ phase, otherwise it is dropped. `start` is naive UTC.
 r_hr_eda / r_hr_temp / r_eda_temp = Pearson r of the per-second series inside the window.
 scr_rate / scr_amp / rmssd_ms = richer.eda_bursts on the raw 4 Hz EDA samples in the window
 and richer.rmssd on the IBI.csv beats in the window (IBI without header: times from recording start).
+eda_phasic / eda_tonic_slope = richer.eda_phasic_tonic on the same raw EDA; hr_slope / temp_slope = richer.slope_per_min on the per-second HR / TEMP.
 """
 import os
 import sys
@@ -56,7 +57,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from richer import eda_bursts, rmssd  # noqa: E402
+from richer import eda_bursts, eda_phasic_tonic, rmssd, slope_per_min  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(ROOT, "data", "external", "e4stress", "Subjects")
@@ -194,7 +195,10 @@ def subject(d):
         move = np.sqrt(max(tot[1] / tot[2] - (tot[0] / tot[2]) ** 2, 0)) if tot[2] else np.nan
         for x, y in (("hr", "eda"), ("hr", "temp"), ("eda", "temp")):
             out[f"r_{x}_{y}"] = corr(sec[x][sl], sec[y][sl], WIN)
-        scr_rate, scr_amp = eda_bursts(e_raw[(e_time >= s) & (e_time < s + WIN)], 4)
+        e_win = e_raw[(e_time >= s) & (e_time < s + WIN)]
+        scr_rate, scr_amp = eda_bursts(e_win, 4)
+        eda_phasic, eda_tonic_slope = eda_phasic_tonic(e_win, 4)
+        t_win = np.arange(WIN, dtype=float)
         rows.append({
             "pid": f"{NAME}_{sid}",
             "start": pd.to_datetime(t0 + s, unit="s") if t0 is not None else pd.NaT,
@@ -205,6 +209,9 @@ def subject(d):
             "t_rel_s": s,
             "scr_rate": scr_rate, "scr_amp": scr_amp,
             "rmssd_ms": rmssd(b_ibi[(b_time >= s) & (b_time < s + WIN)]),
+            "eda_phasic": eda_phasic, "eda_tonic_slope": eda_tonic_slope,
+            "hr_slope": slope_per_min(sec["hr"][sl], t_win),
+            "temp_slope": slope_per_min(sec["temp"][sl], t_win),
         })
     return rows
 

@@ -29,6 +29,7 @@ r_hr_eda / r_hr_temp / r_eda_temp = Pearson r of the per-second series inside th
 Signals: HR.csv (1 Hz), EDA.csv / TEMP.csv (4 Hz), ACC.csv (32 Hz, 1/64 g).
 scr_rate / scr_amp / rmssd_ms = richer.eda_bursts on the raw 4 Hz EDA samples in the window
 and richer.rmssd on the IBI.csv beats whose time falls in the window.
+eda_phasic / eda_tonic_slope = richer.eda_phasic_tonic on the same raw EDA; hr_slope / temp_slope = richer.slope_per_min on the per-second HR / TEMP.
 """
 import os
 import sys
@@ -37,7 +38,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from richer import eda_bursts, rmssd  # noqa: E402
+from richer import eda_bursts, eda_phasic_tonic, rmssd, slope_per_min  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC = os.path.join(ROOT, "data", "external", "stresspredict", "Stress-Predict-Dataset-main")
@@ -185,6 +186,9 @@ def subject(sid, phases):
         ein = (e_time >= ws) & (e_time < ws + WIN)
         r["scr_rate"], r["scr_amp"] = eda_bursts(e_raw[ein], int(e_fs))
         r["rmssd_ms"] = rmssd(b_ibi[(b_time >= ws) & (b_time < ws + WIN)])
+        r["eda_phasic"], r["eda_tonic_slope"] = eda_phasic_tonic(e_raw[ein], int(e_fs))
+        r["hr_slope"] = slope_per_min(sec["hr"][i:j], np.arange(WIN, dtype=float))
+        r["temp_slope"] = slope_per_min(sec["temp"][i:j], np.arange(WIN, dtype=float))
         rows.append(r)
     return rows
 
@@ -201,7 +205,8 @@ def main():
     df = pd.DataFrame(rows)[["pid", "start", "label", "task", "normal", "hr_mean", "eda_mean",
                              "temp_mean", "move", "coverage",
                              "r_hr_eda", "r_hr_temp", "r_eda_temp",
-                             "scr_rate", "scr_amp", "rmssd_ms"]]
+                             "scr_rate", "scr_amp", "rmssd_ms",
+                             "eda_phasic", "eda_tonic_slope", "hr_slope", "temp_slope"]]
     df["start"] = df["start"].astype("datetime64[ns]")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     df.to_parquet(OUT, index=False)

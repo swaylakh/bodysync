@@ -1,0 +1,31 @@
+score,dataset,setting,comparison,n_people,score_calm,score_stress,people_lower_in_stress,p_value,mean_auc,people_auc_above_0.5,top_reason_in_stress,system
+v,wesad,lab,stress vs calm/rest,6,40.21898937119736,16.55713128852994,6,0.03125,0.9888438133874239,6,sweat high (34%),formula: BodySync + bursts
+v,stressexercise,lab,stress vs calm/rest,14,56.44177932926669,43.79181243185614,6,0.2787073832496024,0.6032465437366744,8,sweat high (55%),formula: BodySync + bursts
+v,stresspredict,lab,stress vs calm/rest,14,46.95935858376679,39.90878902678344,11,0.0352783203125,0.6347658192772782,11,sweat high (59%),formula: BodySync + bursts
+v,nurse,free-living,felt stress vs flagged but not stressed,4,59.12215936993573,59.636235055692254,2,,0.5234298699854463,2,burst size high (43%),formula: BodySync + bursts
+v,adarp,free-living,stress vs calm/rest,4,74.85948177683046,73.48641380120259,3,,0.5261974829687162,3,burst size high (29%),formula: BodySync + bursts
+v,canstress,free-living,stress vs calm/rest,10,73.40621090986927,64.65086533330455,9,0.01953125,0.6134610416762329,8,burst size high (32%),formula: BodySync + bursts
+v,wesad,lab,stress vs calm/rest,6,92.74455938164658,15.777525105879546,6,0.03125,0.97703710105404,6, (100%),trained model (start of final push)
+v,stressexercise,lab,stress vs calm/rest,14,87.30931257786948,62.27466761790165,8,0.0579833984375,0.6702302120282557,9, (100%),trained model (start of final push)
+v,stresspredict,lab,stress vs calm/rest,14,56.967321063822,43.40217133342248,12,0.001708984375,0.6744771392013293,13, (100%),trained model (start of final push)
+v,nurse,free-living,felt stress vs flagged but not stressed,4,53.40376232409338,53.744683996463706,2,,0.4382315311619195,2, (100%),trained model (start of final push)
+v,adarp,free-living,stress vs calm/rest,4,60.38635602452568,61.35582608906076,2,,0.48413870083814675,2, (100%),trained model (start of final push)
+v,canstress,free-living,stress vs calm/rest,10,62.881291120019725,55.115731083100286,7,0.322265625,0.5906754724417168,6, (100%),trained model (start of final push)
+v,wesad,lab,stress vs calm/rest,6,94.96864035642619,16.029243075397712,6,0.03125,0.9988242210464433,6, (100%),FINAL BodySync
+v,stressexercise,lab,stress vs calm/rest,14,92.06504895046722,46.65748236651053,12,0.0008544921875,0.9113649160060167,14, (100%),FINAL BodySync
+v,stresspredict,lab,stress vs calm/rest,14,66.63121772342183,26.310412345528732,14,0.0001220703125,0.902218154531992,14, (100%),FINAL BodySync
+v,nurse,free-living,felt stress vs flagged but not stressed,4,58.60201375898097,57.06520812742302,3,,0.500303524464613,3, (100%),FINAL BodySync
+v,adarp,free-living,stress vs calm/rest,4,63.16471849994798,60.72115813999402,3,,0.5446117512297961,2, (100%),FINAL BodySync
+v,canstress,free-living,stress vs calm/rest,10,65.36321708522726,52.85223352037502,7,0.130859375,0.6737018685476145,7, (100%),FINAL BodySync
+v,wesad,lab,stress vs calm/rest,6,59.19328044838577,59.898648801689376,3,0.84375,0.4674279516650827,3, (100%),"FINAL, shuffled labels (should be ~0.5)"
+v,stressexercise,lab,stress vs calm/rest,14,76.22634723541218,76.83171948775683,7,0.5830078125,0.4728527614906807,6, (100%),"FINAL, shuffled labels (should be ~0.5)"
+v,stresspredict,lab,stress vs calm/rest,14,52.01512320233111,51.46610028087557,9,0.2412109375,0.5211317226541586,9, (100%),"FINAL, shuffled labels (should be ~0.5)"
+v,nurse,free-living,felt stress vs flagged but not stressed,4,58.509530530598866,57.05794044986867,3,,0.562882996641311,3, (100%),"FINAL, shuffled labels (should be ~0.5)"
+v,adarp,free-living,stress vs calm/rest,4,63.50974942889246,63.93768735220628,1,,0.4942982326212446,1, (100%),"FINAL, shuffled labels (should be ~0.5)"
+v,canstress,free-living,stress vs calm/rest,10,64.26889306477365,62.27683117627682,7,0.193359375,0.5595328746560596,7, (100%),"FINAL, shuffled labels (should be ~0.5)"
+v,wesad,lab,stress vs calm/rest,6,93.39263059579093,15.832898761031002,6,0.03125,0.9952380952380953,6, (100%),FINAL (later windows)
+v,stresspredict,lab,stress vs calm/rest,14,66.63121772342183,25.16978746508168,14,0.0001220703125,0.9188072313945821,14, (100%),FINAL (later windows)
+v,nurse,free-living,felt stress vs flagged but not stressed,4,63.969082383225135,57.10622493609844,3,,0.5934928365889823,3, (100%),FINAL (later windows)
+v,wesad,lab,stress vs calm/rest,6,95.31590351528591,7.641307419512696,6,0.03125,0.9988095238095238,6, (100%),FINAL + calibration (later windows)
+v,stresspredict,lab,stress vs calm/rest,14,63.199788052023386,22.37456180285081,14,0.0001220703125,0.9134046493091162,14, (100%),FINAL + calibration (later windows)
+v,nurse,free-living,felt stress vs flagged but not stressed,4,60.314106358402256,54.968501656592316,2,,0.563800222294907,3, (100%),FINAL + calibration (later windows)
