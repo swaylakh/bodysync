@@ -71,11 +71,19 @@ def features(w: pd.DataFrame, change: bool, inputs: list[str] = INPUTS, context:
       "move" (or True): still vs moving windows
       "hour": time of day (night / morning / afternoon / evening, 6-hour blocks)
       "day":  calendar day, so slow day-to-day drift is not counted
-    falling back to the person's overall normal where a context has fewer than 10 normal windows."""
+    falling back to the person's overall normal where a context has fewer than 10 normal windows.
+      "past1d" / "past3d" (everyday life only): normal = the person's previous 288 / 864 windows of wear
+        (1 / 3 days of 5-min windows, skipping gaps), never the current or any later window; spread = IQR / 1.349.
+        Lab datasets keep their baseline normal, which already comes before the tasks."""
+    past = context in PAST_WINDOWS
+    if past and not w["normal"].all():
+        context = past = False
     ref = w[w["normal"]].groupby("pid")[inputs]
     med = ref.median().reindex(w.pid).to_numpy()
     spr = ref.agg(bodysync.mad).reindex(w.pid).to_numpy()
-    if context:
+    if past:
+        med, spr = (x.to_numpy() for x in _past_normal(w, inputs, PAST_WINDOWS[context]))
+    elif context:
         if context == "hour":
             key = w.pid + "|" + (w.start.dt.hour // 6).astype("Int64").astype(str)
         elif context == "day":
@@ -98,9 +106,28 @@ def features(w: pd.DataFrame, change: bool, inputs: list[str] = INPUTS, context:
                       tolerance=pd.Timedelta(minutes=3), direction="nearest").set_index("index")
     for c in z.columns:
         z[f"d_{c}"] = m[c] - m[f"{c}_prev"]
+    if past:
+        mmed, mspr = _past_normal(w, ["move"], PAST_WINDOWS[context])
+        z["move_z"] = (w["move"] - mmed["move"]) / (1.349 * mspr["move"] + 1e-6)
+        return z
     mv = w.groupby("pid")["move"]
     z["move_z"] = (w["move"] - mv.transform("median")) / (mv.transform(lambda x: x.quantile(0.75) - x.quantile(0.25)) + 1e-6)
     return z
+
+
+PAST_WINDOWS = {"past1d": 288, "past3d": 864}
+PAST_MIN = 12   # at least 1 hour of earlier wear
+
+
+def _past_normal(w: pd.DataFrame, cols: list[str], n: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Per window: median and spread (IQR / 1.349) of the person's previous n windows (current one excluded)."""
+    med = pd.DataFrame(np.nan, index=w.index, columns=cols)
+    spr = med.copy()
+    for _, g in w.dropna(subset=["start"]).sort_values("start", kind="stable").groupby("pid"):
+        r = g[cols].shift(1).rolling(n, min_periods=PAST_MIN)
+        med.loc[g.index] = r.median().to_numpy()
+        spr.loc[g.index] = ((r.quantile(0.75) - r.quantile(0.25)) / 1.349).to_numpy()
+    return med, spr
 
 
 def fit_predict(X: pd.DataFrame, w: pd.DataFrame, train: pd.Series, test: pd.Series) -> np.ndarray:

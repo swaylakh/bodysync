@@ -1,0 +1,19 @@
+score,dataset,setting,comparison,n_people,score_calm,score_stress,people_lower_in_stress,p_value,mean_auc,people_auc_above_0.5,top_reason_in_stress,system
+v,wesad,lab,stress vs calm/rest,6,94.96864035642619,16.029243075397712,6,0.03125,0.9988242210464433,6, (100%),"FINAL (v1, frozen)"
+v,stressexercise,lab,stress vs calm/rest,14,92.06504895046722,46.65748236651053,12,0.0008544921875,0.9113649160060167,14, (100%),"FINAL (v1, frozen)"
+v,stresspredict,lab,stress vs calm/rest,14,66.63121772342183,26.310412345528732,14,0.0001220703125,0.902218154531992,14, (100%),"FINAL (v1, frozen)"
+v,nurse,free-living,felt stress vs flagged but not stressed,4,58.60201375898097,57.06520812742302,3,,0.500303524464613,3, (100%),"FINAL (v1, frozen)"
+v,adarp,free-living,stress vs calm/rest,4,63.16471849994798,60.72115813999402,3,,0.5446117512297961,2, (100%),"FINAL (v1, frozen)"
+v,canstress,free-living,stress vs calm/rest,10,65.36321708522726,52.85223352037502,7,0.130859375,0.6737018685476145,7, (100%),"FINAL (v1, frozen)"
+v,wesad,lab,stress vs calm/rest,6,94.96864035642619,16.029243075397712,6,0.03125,0.9988242210464433,6, (100%),v3: FINAL + score only when still
+v,stressexercise,lab,stress vs calm/rest,14,92.06504895046722,46.65748236651053,12,0.0008544921875,0.9113649160060167,14, (100%),v3: FINAL + score only when still
+v,stresspredict,lab,stress vs calm/rest,14,66.63121772342183,26.310412345528732,14,0.0001220703125,0.902218154531992,14, (100%),v3: FINAL + score only when still
+v,nurse,free-living,felt stress vs flagged but not stressed,3,72.78797225952148,66.72046560862708,2,,0.6373222912353348,2, (100%),v3: FINAL + score only when still
+v,adarp,free-living,stress vs calm/rest,4,69.76007920393675,67.94049762767108,2,,0.5398768574641014,2, (100%),v3: FINAL + score only when still
+v,canstress,free-living,stress vs calm/rest,5,88.04575180941158,55.49357160250345,4,,0.765,4, (100%),v3: FINAL + score only when still
+v,wesad,lab,stress vs calm/rest,6,59.19328044838577,59.898648801689376,3,0.84375,0.4674279516650827,3, (100%),"v3, shuffled labels (should be ~0.5)"
+v,stressexercise,lab,stress vs calm/rest,14,76.22634723541218,76.83171948775683,7,0.5830078125,0.4728527614906807,6, (100%),"v3, shuffled labels (should be ~0.5)"
+v,stresspredict,lab,stress vs calm/rest,14,52.01512320233111,51.46610028087557,9,0.2412109375,0.5211317226541586,9, (100%),"v3, shuffled labels (should be ~0.5)"
+v,nurse,free-living,felt stress vs flagged but not stressed,3,62.51294839647081,61.77204769822811,2,,0.472659305268001,0, (100%),"v3, shuffled labels (should be ~0.5)"
+v,adarp,free-living,stress vs calm/rest,4,69.41082818635766,70.38725158439904,2,,0.4827498428446786,2, (100%),"v3, shuffled labels (should be ~0.5)"
+v,canstress,free-living,stress vs calm/rest,5,76.85356808238558,70.84731452306112,3,,0.6033333333333334,3, (100%),"v3, shuffled labels (should be ~0.5)"

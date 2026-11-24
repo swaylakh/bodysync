@@ -22,6 +22,7 @@ Two evaluation sets:
 EmpaticaE4Stress is left out: its only calm windows are the baseline that sets the normal.
 """
 import argparse
+import os
 
 import numpy as np
 import pandas as pd
@@ -37,6 +38,10 @@ from validate_datasets import evaluate
 
 SPLIT = RESULTS / "final_split.csv"
 LOG = RESULTS / "iteration_log.csv"
+EVENTS = RESULTS / "iteration_events.csv"   # round 8+: everyday results per stress event (see event_eval)
+# CPU threads for XGBoost. Default = all, which reproduces the frozen results. Fewer threads (env
+# BODYSYNC_THREADS=4) is quieter but shifts results slightly (round 8 ran with 4: DEV mean 0.747 vs 0.752).
+N_JOBS = int(os.environ.get("BODYSYNC_THREADS", 0)) or None
 TEST_SHARE = 0.4
 DATASETS = [d for d in LAB + LIFE if d != "e4stress"]
 CALIB_N = 3
@@ -47,7 +52,14 @@ PSEUDO_SHARE = 0.1      # self-training: each person's most / least stressed-loo
 BASE = {"change": False, "calib": False, "smooth": False, "pooled": False, "shape": False,
         "context": False, "quality": False, "selftrain": False, "model": "xgb", "blend": False,
         "lookback": False, "pool_life": False, "life_model": None, "lab_helper": 0.0, "pseudo": PSEUDO_SHARE,
-        "other_datasets": False}
+        "other_datasets": False, "drop": (), "selftrain_on": "unlabelled", "train_labels": None,
+        "smooth_life": SMOOTH["free-living"], "still_only": None}
+# smooth_life: smoothing window for everyday data. still_only: everyday data is scored (and trained) only on
+#   windows where the person moves at most their own `still_only` quantile of movement (as watches do)
+# train_labels: name of an allw column with other labels to TRAIN on (evaluation keeps `label`)
+# drop: feature-name prefixes left out of the model (audit: e.g. "move_z", "d_" = change over 10 min)
+# selftrain_on: "unlabelled" (frozen system) or "all" of the person's windows (audit check: in everyday data
+#   the unlabelled windows sit near stress reports, so picking them uses the labels)
 LOOKBACK = "15min"
 MODELS = {   # round 4 candidates; "xgb" is the model used in rounds 1-3
     "xgb": dict(n_estimators=200, max_depth=3, learning_rate=0.05),
@@ -152,30 +164,42 @@ def fit_score(X: pd.DataFrame, allw: pd.DataFrame, train: np.ndarray, extra: np.
         clf = make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000))
         clf.fit(X[rows].fillna(0), y, logisticregression__sample_weight=weight)
         return 100 * (1 - clf.predict_proba(X[test].fillna(0))[:, 1])
-    clf = XGBClassifier(**MODELS[model], subsample=0.8, colsample_bytree=0.8, random_state=SEED, verbosity=0)
+    clf = XGBClassifier(**MODELS[model], subsample=0.8, colsample_bytree=0.8, random_state=SEED, verbosity=0, n_jobs=N_JOBS)
     clf.fit(X[rows], y, sample_weight=weight)
     return 100 * (1 - clf.predict_proba(X[test])[:, 1])
 
 
-def smooth(allw: pd.DataFrame, score: pd.Series) -> pd.Series:
+def smooth(allw: pd.DataFrame, score: pd.Series, life: str = SMOOTH["free-living"]) -> pd.Series:
     """Past-only rolling mean of the score per person (stress lasts minutes, not seconds)."""
     out = score.copy()
     for (_, _), g in allw[score.notna() & allw.start.notna()].groupby(["dataset", "pid"]):
         g = g.sort_values("start")
-        roll = pd.Series(score[g.index].to_numpy(), index=g.start).rolling(SMOOTH[g.setting.iloc[0]]).mean()
+        roll = pd.Series(score[g.index].to_numpy(), index=g.start).rolling(life if g.setting.iloc[0] == "free-living" else SMOOTH["lab"]).mean()
         out[g.index] = roll.to_numpy()
     return out
 
 
-def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool = False,
+def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool | str = False,
         eval_set: str = "all", datasets: list[str] = DATASETS, quality_eval: bool = False,
-        eval_relabel: dict | None = None) -> pd.DataFrame:
-    """Each person in `group` is scored by a model trained on the other people (DEV only when testing)."""
+        eval_relabel: dict | None = None, eval_labels: pd.Series | None = None,
+        return_scores: bool = False) -> pd.DataFrame | tuple[pd.DataFrame, pd.Series]:
+    """Each person in `group` is scored by a model trained on the other people (DEV only when testing).
+    shuffle: True = permute each person's labels; "circular" = rotate them in time (keeps stress blocks intact,
+             a stricter leak check). eval_labels: replaces `label` at test time only (training unchanged)."""
     allw = allw.copy()
+    eval_label = allw.label.copy()
+    if cfg["train_labels"]:
+        allw["label"] = allw[cfg["train_labels"]]
+        allw["y"] = (allw.label == "stress").astype(int)
+        allw["labelled"] = (allw.label == "stress") | allw.label.isin(NON_STRESS)
     if shuffle:   # credibility check: shuffle each person's labels, keeping their stress/calm counts
         rng = np.random.default_rng(SEED)
         for _, g in allw[allw.labelled].groupby(["dataset", "pid"]):
-            y = rng.permutation(g.y.to_numpy())
+            if shuffle == "circular":
+                g = g.sort_values("start")
+                y = np.roll(g.y.to_numpy(), int(rng.integers(len(g) // 4, 3 * len(g) // 4 + 1)))
+            else:
+                y = rng.permutation(g.y.to_numpy())
             calm_labels = g.label[g.y == 0].to_numpy()
             calm_labels = calm_labels if len(calm_labels) else np.array(["calm"])
             # windows that turn calm take a calm label this person really has (e.g. no_stress for nurses)
@@ -184,8 +208,14 @@ def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool = Fals
             allw.loc[g.index, "y"] = y
             allw.loc[g.index, "label"] = new
     Xc = X[(cfg["change"], cfg["shape"], cfg["context"], cfg["lookback"])]
+    if cfg["drop"]:
+        Xc = Xc.loc[:, ~Xc.columns.str.startswith(tuple(cfg["drop"]))]
     eda_on = allw.eda_mean > EDA_OFF
-    trainable = allw.labelled & (allw.group == "dev") & (eda_on if cfg["quality"] else True)
+    still = np.ones(len(allw), bool)
+    if cfg["still_only"]:
+        q = allw.groupby(["dataset", "pid"]).move.transform(lambda x: x.quantile(cfg["still_only"]))
+        still = ~((allw.setting == "free-living") & ~(allw.move <= q)).to_numpy()
+    trainable = allw.labelled & (allw.group == "dev") & (eda_on if cfg["quality"] else True) & still
     score = pd.Series(np.nan, index=allw.index)
     for name in datasets:
         for pid in allw.loc[(allw.dataset == name) & (allw.group == group), "pid"].unique():
@@ -204,7 +234,7 @@ def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool = Fals
             extra = me & allw.calib.to_numpy() if cfg["calib"] else np.zeros(len(allw), bool)
             s = fit_score(Xc, allw, train, extra, me, **fit)
             if cfg["selftrain"]:   # adapt to this person with their own unlabelled windows
-                unl = np.where(me & ~allw.labelled.to_numpy())[0]
+                unl = np.where(me & still & (True if cfg["selftrain_on"] == "all" else ~allw.labelled.to_numpy()))[0]
                 if len(unl) >= 20:
                     su = pd.Series(s, index=np.where(me)[0])[unl]
                     k = max(1, int(cfg["pseudo"] * len(unl)))
@@ -215,10 +245,11 @@ def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool = Fals
                     y_ps.iloc[lo], y_ps.iloc[hi] = 1, 0
                     s = fit_score(Xc, allw, train | extra, pseudo, me, y_ps, extra_weight=1.0, **fit)
             score[me] = s
+    score[~still] = np.nan
     if cfg["blend"]:   # average with the hand-made BodySync formula (+ sweat bursts), same 0-100 scale
         score = 0.5 * score + 0.5 * allw["formula"]
     if cfg["smooth"]:
-        score = smooth(allw, score)
+        score = smooth(allw, score, cfg["smooth_life"])
     rows = []
     for name in datasets:
         m = (allw.dataset == name) & (allw.group == group)
@@ -226,9 +257,45 @@ def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool = Fals
         if quality_eval:
             m &= eda_on
         s = allw[m].assign(v=score[m], v_reason="")
+        if cfg["train_labels"] and not shuffle:
+            s["label"] = eval_label[m]
+        if eval_labels is not None:
+            s["label"] = eval_labels[m]
         if eval_relabel:   # a different comparison at test time only (training labels unchanged)
             s["label"] = s.label.replace(eval_relabel)
         rows.append(evaluate(name, s, allw.loc[m, "setting"].iloc[0], "v"))
+    return (pd.DataFrame(rows), score) if return_scores else pd.DataFrame(rows)
+
+
+def event_eval(allw: pd.DataFrame, score: pd.Series, group: str, labels: pd.Series | None = None,
+               datasets: list[str] = LIFE) -> pd.DataFrame:
+    """Everyday life, per stress EVENT instead of per window (more events than people, less noise).
+    Event = a run of a person's stress windows with gaps < 30 min. Control = the same person's calm windows
+    within 1 h of the event's clock time, on a different day. Hit = event's mean score below the control's.
+    Fixed before running; reported as the share of events that are hits (0.5 = chance) and a sign-test p."""
+    from scipy.stats import binomtest
+    lab = allw.label if labels is None else labels
+    calm_names = {"nurse": {"no_stress"}}
+    rows = []
+    for name in datasets:
+        d = allw[(allw.dataset == name) & (allw.group == group) & score.notna() & allw.start.notna()]
+        hits = []
+        for _, g in d.sort_values("start").groupby("pid"):
+            st = g[lab[g.index] == "stress"]
+            calm = g[lab[g.index].isin(calm_names.get(name, NON_STRESS))]
+            if st.empty or calm.empty:
+                continue
+            ev = (st.start.diff() > pd.Timedelta(minutes=30)).cumsum()
+            ch = calm.start.dt.hour + calm.start.dt.minute / 60
+            for _, e in st.groupby(ev):
+                h = (e.start.dt.hour + e.start.dt.minute / 60).mean()
+                diff = (ch - h).abs() % 24
+                ctrl = calm[(np.minimum(diff, 24 - diff) <= 1) & (calm.start.dt.date != e.start.dt.date.iloc[0])]
+                if len(ctrl) >= 3:
+                    hits.append(score[e.index].mean() < score[ctrl.index].mean())
+        n = len(hits)
+        rows.append({"dataset": name, "events": n, "hit_rate": np.mean(hits) if n else np.nan,
+                     "p_value": binomtest(int(np.sum(hits)), n).pvalue if n else np.nan})
     return pd.DataFrame(rows)
 
 
@@ -395,6 +462,35 @@ def main():
         r6 = {**FINAL, "pool_life": True, "lab_helper": 0.3, "pseudo": 0.2}
         log("7", "round-6 stack (helper + stronger self-training)", run(r6, allw, X, "dev"))
         log("7", "+ xgb & logistic averaged (everyday)", run({**r6, "life_model": "xgb+logistic"}, allw, X, "dev"))
+    if args.round == 8:   # round 8 (after the audit): everyday life, judged per window AND per event
+        # keep rule (fixed before running): everyday mean AUC gain > 0.01 (seed noise SD of the mean = 0.002),
+        # better in >= 2 of 3 everyday datasets, event hit rate not lower, no lab dataset down > 0.03
+        import audit
+        fair = allw.label.copy()
+        fair[(allw.dataset == "nurse") & (allw.label == "calm")] = "unknown"   # nurse test = stress vs no_stress
+        fair[allw.dataset == "adarp"] = audit.adarp_labels(allw)[allw.dataset == "adarp"]   # 15 min before a press
+        allw["label_fair"] = fair
+        variants = {"final system": FINAL,
+                    "+ past-only normal (1 day)": {**FINAL, "context": "past1d"},
+                    "+ past-only normal (3 days)": {**FINAL, "context": "past3d"},
+                    "+ train on the tested contrast": {**FINAL, "train_labels": "label_fair"}}
+        for idea, cfg in variants.items():
+            res, score = run(cfg, allw, X, "dev", return_scores=True)
+            log("8", idea, res)
+            ev = event_eval(allw, score, "dev").assign(round="8", idea=idea)
+            print(ev.round(3).to_string(index=False), flush=True)
+            ev.to_csv(EVENTS, mode="a", header=not EVENTS.exists(), index=False)
+    if args.round == 9:   # round 9: everyday life, same keep rule as round 8 (all threads, as the frozen system)
+        variants = {"final system (all threads)": FINAL,
+                    "+ 30-min smoothing (everyday)": {**FINAL, "smooth_life": "30min"},
+                    "+ 60-min smoothing (everyday)": {**FINAL, "smooth_life": "60min"},
+                    "+ score only when still (everyday, below own median movement)": {**FINAL, "still_only": 0.5}}
+        for idea, cfg in variants.items():
+            res, score = run(cfg, allw, X, "dev", return_scores=True)
+            log("9", idea, res)
+            ev = event_eval(allw, score, "dev").assign(round="9", idea=idea)
+            print(ev.round(3).to_string(index=False), flush=True)
+            ev.to_csv(EVENTS, mode="a", header=False, index=False)
 
 
 if __name__ == "__main__":

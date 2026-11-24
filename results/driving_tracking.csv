@@ -1,0 +1,11 @@
+score,comparison,drives,mean_r,drives_r_above_0,p_sign
+"FINAL BodySync, never saw this dataset",all driving,13,0.09107472054169279,7,1.0
+"FINAL BodySync, never saw this dataset",inside city only,13,-0.08856612572332735,5,0.5810546875
+"FINAL BodySync, trained on the other drivers",all driving,13,0.12067861818398759,7,1.0
+"FINAL BodySync, trained on the other drivers",inside city only,13,0.1094297841058398,7,1.0
+original formula + sweat bursts,all driving,13,0.09432791699122076,10,0.09228515625
+original formula + sweat bursts,inside city only,13,-0.032187840443374145,4,0.266845703125
+shortcut: wrist movement (more = stressed),all driving,13,-0.2982445092153549,2,0.0224609375
+shortcut: wrist movement (more = stressed),inside city only,13,-0.05213772249561803,7,1.0
+shortcut: minutes since start (later = stressed),all driving,13,0.14889393645343998,9,0.266845703125
+shortcut: minutes since start (later = stressed),inside city only,13,0.36499733879079305,12,0.00341796875

@@ -4,12 +4,12 @@ A 0–100 score for how far your body is from **your own normal** right now, fro
 
 ## Final system (final presentation)
 
-`src/final_eval.py`. The deck is `docs/slides/BodySync_Final.pptx` and the report is `report/overleaf_final.tex`, compiled as `report/overleaf_final.pdf`. For Overleaf, upload `figures/fig6_final.png` and `figures/fig3_example_week.png` with it.
+`src/final_eval.py`. The deck is `docs/slides/BodySync_Final.pptx` and the report is `report/overleaf_final.tex`, compiled as `report/overleaf_final.pdf`. For Overleaf, upload `figures/fig3_example_week.png` with it.
 
 The sections after "The score" record the earlier stages: the sync idea, the first formula, and the richer features. Their numbers come from before the final push.
 
 **What it does:**
-1. **Your normal**, per situation.
+1. **Your normal:** each person's own median and typical spread of every input (one normal per person; per-situation normals were tried and didn't help).
 2. **Stress signals measured against it:** sweat bursts, fast vs slow sweat, in-window trends, and change over the last 10 min.
 3. **A trained XGBoost model** that adapts to each person through self-training on their unlabelled windows.
 4. **A smoothed score.**
@@ -25,9 +25,12 @@ The sections after "The score" record the earlier stages: the sync idea, the fir
 | Stress + exercise | 14 | 0.60 | 0.67 | **0.91** |
 | Stress-Predict | 14 | 0.64 | 0.67 | **0.90** |
 | CAN-STRESS | 10 | 0.61 | 0.59 | **0.67** |
-| Nurse stress | 4 | 0.52 | 0.44 | 0.50 |
-| ADARP | 4 | 0.53 | 0.48 | 0.55 |
-| **Average** | | 0.65 | 0.64 | **0.76** |
+| Nurse stress* | 4 | 0.52 | 0.44 | 0.50 |
+| ADARP* | 4 | 0.53 | 0.48 | 0.55 |
+| **Average, all six** | | 0.65 | 0.64 | **0.76** |
+| **Average, datasets with ≥ 5 test people** | | 0.71 | 0.73 | **0.87** |
+
+\* Too few test people to judge. Resampling people gives a 95% range of 0.29–0.65 for nurses and 0.49–0.61 for ADARP (`results/audit.csv`). The all-six average is the one fixed before testing; the ≥ 5 average was added afterwards to set these two aside.
 
 Notes:
 - **Leak check:** with each person's labels shuffled, the final system scores 0.51.
@@ -39,15 +42,46 @@ Notes:
 
 ![final](figures/fig6_final.png)
 
+### Checks after the freeze: is it stress or a shortcut?
+
+`src/audit.py` → `results/audit.csv`. Nothing here changes the frozen system. A shortcut is something that comes with stress in a study without being stress: moving during a talk task, or stress always coming before the rest periods.
+
+| Check (locked test people) | WESAD | Stress + exercise | Stress-Predict | CAN-STRESS |
+|---|---|---|---|---|
+| Final system | 0.999 | 0.91 | 0.90 | 0.67 |
+| Without wrist movement | 0.999 | 0.91 | 0.88 | 0.67 |
+| Leaving out rest right after a stressor | 0.999 | 0.91 | 0.90 | – |
+| A model given only movement | 0.97 | 0.46 | 0.55 | 0.46 |
+| A model given only the clock | 0.97 | 0.78 | 0.96 | 0.59 |
+| 95% range (resampling people) | 0.996–1.0 | 0.85–0.97 | 0.85–0.95 | 0.52–0.83 |
+
+- **Lab results stand:** they hold without movement and without the recovery periods. The clock alone can also separate some lab protocols, because stress always comes at the same point. BodySync never sees the clock, but those datasets can't rule out that it partly tracks something that drifts with time.
+- **CAN-STRESS:** calm reports cluster in the evening (hour of day alone scores 0.74 over all people). With stress and calm matched to the same hour, too few people are left (5 DEV, 2 TEST) to tell.
+- **ADARP:** stress labelled only from the 15 min *before* a button press (no press movement) gives 0.50 instead of 0.55.
+- **Self-training** gives the same results when it uses all of a person's windows, so its choice of windows doesn't leak labels.
+- **Seed noise:** retraining with 5 seeds moves the DEV average by SD 0.002.
+
+**Rounds 8–9 (everyday life, DEV only; `results/iteration_log.csv`, `results/iteration_events.csv`):** none passed the keep rule.
+- **A past-only normal** (previous 1 or 3 days of wear): CAN-STRESS 0.65 → 0.50.
+- **Training on the tested contrast:** +0.007.
+- **Longer smoothing:** no gain.
+- **Scoring only while still** (below the person's own median movement): DEV +0.014, but its third, disclosed look at the locked people (`results/final_test_v3.csv`) scored fewer people, and on the same people it was not consistently better (ADARP no gain).
+
+**v1 stays the final system.**
+
 ### A brand-new dataset: real driving (AffectiveROAD)
 
 Added after the system was frozen; nothing was tuned on it (`src/new_datasets.py`, run once; `results/new_datasets.csv`). AffectiveROAD (El Haouij et al., ACM SAC 2018, MIT Media Lab, 125 citations) has 9 drivers and 13 real drives, with an Empatica E4 on each wrist and 15 min of rest before and after. City segments count as stress, the last rest as calm and the first rest as the normal (`src/datasets/affectiveroad.py`). The dataset's own continuous stress rating agrees: city 0.70–0.84, highway about 0.5.
 
 | AffectiveROAD (all 9 drivers are new) | First version | Final, trained on the other drivers | Final, never saw this dataset |
 |---|---|---|---|
-| City vs resting afterwards | 0.83 | **0.92** (9/9 drivers lower) | 0.67 |
 | City vs highway (both driving) | 0.73 | 0.61 | **0.76** |
+| City vs resting afterwards | 0.83 | **0.92** (9/9 drivers lower) | 0.67 |
 | Shuffled labels | | 0.55 | |
+
+- **City vs highway is the fairest real-world test:** both are driving, and the shortcuts can't explain it. Movement alone scores 0.38; it runs the other way, because highway windows move more. Time since the start alone scores 0.50.
+- **City vs rest is partly movement:** driving vs parked; movement alone scores 0.90.
+- **BodySync doesn't follow the dataset's moment-to-moment stress rating within a drive:** `src/driving_tracking.py`, `results/driving_tracking.csv`, mean r ≈ 0.1, 7/13 drives. The rating itself mostly rises with time.
 
 BIG IDEAS (Duke, PhysioNet) was also checked. It has 10 days of E4 data per person but no stress labels (it's a glucose study), so it can't test stress detection.
 
@@ -154,11 +188,13 @@ The trained models are tested two ways:
 - **BodySync (B) catches acute stress on WESAD,** the field's standard benchmark, and weakly on the other lab datasets.
 - **On everyday stress (nurses, ADARP, CAN-STRESS) it is at chance.** Average heart rate, sweat and temperature look the same in moments people reported as stressful and in calm ones. This matches the well-known problem that wearable stress detection rarely carries over to new datasets.
 - **So BodySync measures "how different is your body from your normal"**: it catches strong physical stress responses, but it isn't an everyday stress detector.
-- The final system (top of this page) later raised lab results to about 0.9 on every dataset and CAN-STRESS to 0.67, and scored 0.92 on unseen real driving.
+- The final system (top of this page) later raised lab results to about 0.9 on every dataset and CAN-STRESS to 0.67, and scored 0.76 on city vs highway driving in a dataset it never saw.
 
 ## Limitations
 
 - **The normal uses the whole recording,** including future data and the window being scored. A real app would need a past-only or calibration-period normal.
+- **A past-only rolling normal was tried for everyday life** (round 8) and did worse, so the final system keeps the whole-recording normal.
+- **The final system can't run on ZU-PWD** (no raw 4 Hz sweat signal), so the "what a user sees" week uses the basic formula.
 - **The normal is fixed, not rolling,** so slow drift (over weeks, or within a lab session) isn't handled.
 - **ZU-PWD states come from Empatica's own sleep and activity algorithms,** not ground truth. A window gets a state only if at least 70% of its minutes share it; otherwise it is "other".
 - **ZU-PWD has only one reading per minute,** and EDA is often near the sensor floor. All the external datasets use the older E4 watch.
@@ -170,9 +206,13 @@ pip install -r requirements.txt
 python src/datasets/<name>.py      # once per downloaded dataset (see below)
 python src/run_all.py              # ZU-PWD pipeline + scoring of all converted datasets
 python src/feature_test.py         # richer features + trained model
-python src/final_eval.py --round N # final push on DEV people (N = 1, 11, 2-7); --final = locked test
+python src/final_eval.py --round N # final push on DEV people (N = 1, 11, 2-9); --final = locked test
 python src/new_datasets.py         # frozen system on AffectiveROAD
+python src/driving_tracking.py     # frozen system vs AffectiveROAD's moment-to-moment stress rating
+python src/audit.py                # shortcut checks, seed noise, 95% ranges
 ```
+
+XGBoost uses all CPU threads, which reproduces the frozen numbers. `BODYSYNC_THREADS=4` is quieter but shifts results slightly.
 
 | Step | File |
 |---|---|
@@ -186,6 +226,8 @@ python src/new_datasets.py         # frozen system on AffectiveROAD
 | Sweat bursts, HRV and a trained model on the lab datasets | `src/feature_test.py` |
 | Final push: locked split, iteration log, locked test | `src/final_eval.py` |
 | Frozen system on a brand-new dataset (AffectiveROAD) | `src/new_datasets.py` |
+| Moment-to-moment stress rating while driving | `src/driving_tracking.py` |
+| Shortcut checks, seed noise, 95% ranges | `src/audit.py` |
 | Report tables + single-file Overleaf version | `report/make_tables.py` (after compiling `report/main.tex`) |
 
 ### Getting the data

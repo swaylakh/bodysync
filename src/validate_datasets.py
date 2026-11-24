@@ -49,7 +49,8 @@ def score(w: pd.DataFrame, setting: str) -> pd.DataFrame:
     return bodysync.compute(w, context=pd.Series(ctx, index=w.index), normal=w["normal"].astype(bool))
 
 
-def evaluate(name: str, s: pd.DataFrame, setting: str, col: str) -> dict:
+def person_aucs(name: str, s: pd.DataFrame, col: str) -> tuple[pd.Series, pd.DataFrame, str, pd.DataFrame]:
+    """Within-person AUC (lower score = stress) for people with >= MIN_WINDOWS stress and calm windows."""
     calm, comparison = CALM_OVERRIDE.get(name, (CALM, "stress vs calm/rest"))
     if not s.label.isin(calm).any():
         calm, comparison = {"baseline"}, "stress vs baseline (weaker: baseline set the normal)"
@@ -59,6 +60,11 @@ def evaluate(name: str, s: pd.DataFrame, setting: str, col: str) -> dict:
     per = per["mean"][(per["size"] >= MIN_WINDOWS).all(axis=1)]
     aucs = s[s.pid.isin(per.index)].groupby("pid").apply(
         lambda g: roc_auc_score(g.stress, -g[col]), include_groups=False)
+    return aucs, per, comparison, s
+
+
+def evaluate(name: str, s: pd.DataFrame, setting: str, col: str) -> dict:
+    aucs, per, comparison, s = person_aucs(name, s, col)
     reasons = s[s.stress][f"{col}_reason"].value_counts(normalize=True)
     return {"score": SCORES.get(col, col), "dataset": name, "setting": setting, "comparison": comparison, "n_people": len(per),
             "score_calm": per[False].mean(), "score_stress": per[True].mean(),

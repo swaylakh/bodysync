@@ -1,0 +1,28 @@
+dataset,events,hit_rate,p_value,round,idea
+nurse,31,0.5161290322580645,1.0,8,final system
+adarp,104,0.6826923076923077,0.000247115841064573,8,final system
+canstress,0,,,8,final system
+nurse,31,0.5161290322580645,1.0,8,+ past-only normal (1 day)
+adarp,104,0.6346153846153846,0.0077996161848893665,8,+ past-only normal (1 day)
+canstress,0,,,8,+ past-only normal (1 day)
+nurse,31,0.45161290322580644,0.720100131817162,8,+ past-only normal (3 days)
+adarp,104,0.6730769230769231,0.0005342841899801615,8,+ past-only normal (3 days)
+canstress,0,,,8,+ past-only normal (3 days)
+nurse,31,0.45161290322580644,0.720100131817162,8,+ train on the tested contrast
+adarp,104,0.6442307692307693,0.004232546845609295,8,+ train on the tested contrast
+canstress,0,,,8,+ train on the tested contrast
+nurse,31,0.5806451612903226,0.47312965989112854,9,final system (all threads)
+adarp,104,0.6634615384615384,0.0011086208878113386,9,final system (all threads)
+canstress,0,,,9,final system (all threads)
+nurse,31,0.6129032258064516,0.28104151505976915,9,+ 30-min smoothing (everyday)
+adarp,104,0.6346153846153846,0.0077996161848893665,9,+ 30-min smoothing (everyday)
+canstress,0,,,9,+ 30-min smoothing (everyday)
+nurse,31,0.5806451612903226,0.47312965989112854,9,+ 60-min smoothing (everyday)
+adarp,104,0.6057692307692307,0.03895793340131176,9,+ 60-min smoothing (everyday)
+canstress,0,,,9,+ 60-min smoothing (everyday)
+nurse,20,0.7,0.11531829833984375,9,"+ score only when still (everyday, below own median movement)"
+adarp,100,0.64,0.006637120515926128,9,"+ score only when still (everyday, below own median movement)"
+canstress,0,,,9,"+ score only when still (everyday, below own median movement)"
+nurse,29,0.6551724137931034,0.13604594767093658,9,"+ score only when still (everyday, below own 75th pct movement)"
+adarp,108,0.5740740740740741,0.14857634761056235,9,"+ score only when still (everyday, below own 75th pct movement)"
+canstress,0,,,9,"+ score only when still (everyday, below own 75th pct movement)"
