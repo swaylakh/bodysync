@@ -4,7 +4,7 @@ A 0–100 score for how far your body is from **your own normal** right now, fro
 
 ## Final system (final presentation)
 
-`src/final_eval.py`. The deck is `docs/slides/BodySync_Final.pptx` (PDF copy alongside) and the report is `report/overleaf_final.tex`, compiled as `report/overleaf_final.pdf`. For Overleaf, upload `figures/fig7_example_person.png` with it.
+`src/final_eval.py`. The deck is `docs/slides/BodySync_Final.pptx` (PDF copy alongside) and the report is `report/BodySync_Final_Report.tex`, compiled as `report/BodySync_Final_Report.pdf`. To compile it elsewhere (e.g. Overleaf), upload `figures/fig7_example_person.png` with it.
 
 The deck and report present the four main studies (WESAD, Stress + exercise, Stress-Predict, CAN-STRESS) plus real driving. The nurse and ADARP studies had only 4 locked test people each and scored near a coin flip; they are kept below for the record and mentioned in the report's limitations.
 
@@ -258,7 +258,7 @@ Each loader's docstring explains its file layout and labelling rules. They all w
 src/            pipeline; src/datasets/ has one loader per external dataset
 results/        result tables
 figures/        fig1 typical day, fig2 coupling by state, fig3 example week, fig4 all datasets, fig5 sync vs BodySync, fig6 final locked-test results
-report/         overleaf_final.tex/.pdf = final 4-page report; main.tex (+ refs.bib, tables/) = full earlier report, overleaf.tex = the same as one file; archive/ = progress report
+report/         BodySync_Final_Report.tex/.pdf = final 5-page report; main.tex (+ refs.bib, tables/) = full earlier report, overleaf.tex = the same as one file; archive/ = progress report
 docs/           paper summary, related work; slides/BodySync_Final.pptx = final deck, slides/archive/ = earlier weekly and progress decks
 data/           datasets (not in git)
 ```
