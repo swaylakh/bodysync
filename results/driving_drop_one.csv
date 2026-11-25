@@ -1,0 +1,7 @@
+step,auc,lower_in_stress
+final system,0.755,8/9
+final without self-training,0.672,7/9
+final without smoothing,0.734,9/9
+final without fast/slow sweat + trends,0.806,9/9
+final without change over 10 min,0.696,9/9
+final without sweat bursts,0.74,9/9

@@ -77,6 +77,9 @@ MIN_CALIB_PEOPLE = 5
 FINAL = {**BASE, "change": True, "smooth": True, "shape": True, "selftrain": True}
 # v2, frozen after round 7 (everyday-life push, rounds 5-7 on DEV). Its locked-test run is the
 # SECOND look at the TEST people, which the report states.
+DROP_ONE = [("self-training", {"selftrain": False}), ("smoothing", {"smooth": False}),
+            ("fast/slow sweat + trends", {"shape": False}), ("change over 10 min", {"change": False}),
+            ("sweat bursts", {"drop": ("z_scr", "d_z_scr")})]
 FINAL_V2 = {**FINAL, "pool_life": True, "lab_helper": 0.3, "pseudo": 0.2, "life_model": "xgb+logistic"}
 
 
@@ -560,6 +563,10 @@ def main():
             log("15", f"+ {name}", run(cfg, allw, X, "dev"))
     if args.round == 16:  # round 16: sweat bursts as their own step - trained model without them (DEV only)
         log("16", "base: trained, no sweat bursts", run({**BASE, "drop": ("z_scr", "d_z_scr")}, allw, X, "dev"))
+    if args.round == 17:  # round 17: the finished system with ONE step removed at a time (DEV only)
+        log("17", "final system", run(FINAL, allw, X, "dev"))
+        for name, off in DROP_ONE:
+            log("17", f"final without {name}", run({**FINAL, **off}, allw, X, "dev"))
     if args.round == 13:  # round 13: which step overlaps with self-training? each feature with and without it (DEV only)
         for name, step in [("change over 10 min", {"change": True}), ("smoothing", {"smooth": True}),
                            ("fast/slow sweat + trends", {"shape": True})]:

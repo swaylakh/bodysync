@@ -10,7 +10,7 @@ import feature_test
 from config import RESULTS
 
 feature_test.LAB.extend(["affectiveroad"])
-from final_eval import BASE, prepare, run  # noqa: E402
+from final_eval import BASE, DROP_ONE, FINAL, prepare, run  # noqa: E402
 
 RELABEL = {"highway": "calm", "rest": "later_rest"}
 
@@ -18,6 +18,14 @@ RELABEL = {"highway": "calm", "rest": "later_rest"}
 def main():
     allw, X, _ = prepare()
     allw.loc[allw.dataset == "affectiveroad", "group"] = "dev"
+    if len(sys.argv) > 1 and sys.argv[1] == "--drop-one":   # finished system minus one step at a time
+        rows = []
+        for name, off in [("final system", {})] + [(f"final without {n}", o) for n, o in DROP_ONE]:
+            r = run({**FINAL, **off, "other_datasets": True}, allw, X, "dev", datasets=["affectiveroad"], eval_relabel=RELABEL).iloc[0]
+            rows.append({"step": name, "auc": round(r.mean_auc, 3), "lower_in_stress": f"{r.people_lower_in_stress}/{r.n_people}"})
+            print(rows[-1], flush=True)
+        pd.DataFrame(rows).to_csv(RESULTS / "driving_drop_one.csv", index=False)
+        return
     last = len(sys.argv) > 1 and sys.argv[1] == "--self-last"
     steps = [("+ smoothing", {"smooth": True}), ("+ fast/slow sweat + trends", {"shape": True}),
              ("+ change over 10 min", {"change": True})]

@@ -110,6 +110,7 @@ Each person hands over with one line: Ananya → "Swayam will show how it learns
 - **"Isn't the lab result too good?"** (Swayam) The lab stress tests are very intense, so they're easy to spot. Real life is harder, and we say so.
 - **"Why is 85% higher than 82%?"** (Swayam) Luck of the draw: the hidden group happened to be a bit easier. It also shows it didn't just memorise the people it was built on.
 - **"Does every step help in every study?"** (Swayam) On average yes, not everywhere. Sweat bursts help most on WESAD and driving, and cost a little on Stress-Predict and everyday life.
+- **"Which step matters most?"** (Swayam) We removed one step at a time from the finished system. Change over 10 minutes matters most (about −3 without it), then smoothing (−2.4) and self-training (−1.9). No single step carries it; the gain is spread out.
 - **"What is the formula?"** (Ananya) A z-score from your own normal for each signal, counting only the stressed direction, combined into one 0–100 score. Heart rate and sweat both 2 spreads up with normal temperature gives about 55.
 - **"How do you know sleep from rest?"** (Ananya) The Empatica watch labels it; rest means awake and still.
 - **"Isn't driving just movement?"** (Bhavya) That's why we compare city with highway: both are driving. City vs parked is even higher, 92%, but that's partly just moving vs sitting.
