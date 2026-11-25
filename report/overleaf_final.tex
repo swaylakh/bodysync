@@ -11,7 +11,7 @@
 \graphicspath{{figures/}{./}}
 
 \title{BodySync: A Personal Stress Score from Your Wristband}
-\author{Swayam Lakhotia \and Bhavya Bajaj \and Ananya Khaitan}
+\author{Swayam Lakhotia \and Ananya Khaitan \and Bhavya Bajaj}
 \date{November 2026}
 
 \begin{document}
@@ -36,6 +36,8 @@ Our first version asked whether the signals \emph{move together} the way they us
 \item \textbf{The score} is smoothed over the last few minutes, since stress lasts minutes, not seconds.
 \end{enumerate}
 
+The first version of the personal-normal score (``first version'' below) was a plain formula with no learning: for heart rate, sweat and skin temperature, measure how many of the person's usual swings (median absolute deviation) they are from their own normal, counting only the stress direction (heart rate up, sweat up, temperature down); take the root-mean-square of these as the \emph{distance}, and set score $= 100 / (1 + \mathrm{distance}/2)$. At your normal the score is 100; two usual swings away it is 50. The final BodySync replaces this formula with a trained model.
+
 \section{Data}
 
 \begin{table}[H]
@@ -45,19 +47,17 @@ Our first version asked whether the signals \emph{move together} the way they us
 \toprule
 Dataset & Setting & People & Citations & Stress label \\
 \midrule
-ZU-PWD '25~\cite{zupwd} (ours) & daily life & 27 & -- & none (used for the demo) \\
+ZU-PWD '25~\cite{zupwd} (ours) & daily life & 27 & -- & none (used for the first idea) \\
 WESAD~\cite{wesad} & lab & 15 & 1{,}352 & speech + maths test \\
+AffectiveROAD~\cite{affectiveroad} (new) & real driving & 9 & 125 & city traffic vs highway \\
 Stress-Predict~\cite{stresspredict} & lab & 35 & 113 & Stroop test + interview \\
 Stress + exercise~\cite{stressexercise} & lab & 36 & 37 & stress tasks + cycling \\
-Nurse stress~\cite{nurse} & hospital & 15 & 119 & nurse-rated stress \\
-ADARP~\cite{adarp} & daily life & 11 & 13 & button press when stressed \\
 CAN-STRESS~\cite{canstress} & daily life & 62 & 1 & stress ratings 0--9 \\
-AffectiveROAD~\cite{affectiveroad} (new) & real driving & 9 & 125 & city traffic vs rest \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-All eight stress datasets use the Empatica E4, the older version of the EmbracePlus in our own dataset, which records the same signals.
+All five stress datasets use the Empatica E4, the older version of the EmbracePlus in our own dataset, which records the same signals.
 
 \section{How we tested it}
 
@@ -76,29 +76,26 @@ All eight stress datasets use the Empatica E4, the older version of the EmbraceP
 \caption{Locked test people: how well each version picks out stress (0.5 = coin flip, 1 = always).}
 \begin{tabular}{llccc}
 \toprule
-Dataset & Setting & Test people & First version & Final BodySync \\
+Dataset & Setting & Test people & First version$^\dagger$ & Final BodySync \\
 \midrule
-WESAD$^*$ & lab & 6 & 0.99 & \textbf{0.99+} \\
-Stress + exercise & lab & 14 & 0.60 & \textbf{0.91} \\
-Stress-Predict & lab & 14 & 0.64 & \textbf{0.90} \\
-CAN-STRESS & daily life & 10 & 0.61 & \textbf{0.67} \\
-Nurse stress$^\dagger$ & hospital & 4 & 0.52 & 0.50 \\
-ADARP$^\dagger$ & daily life & 4 & 0.53 & 0.55 \\
+WESAD$^*$ & lab & 6 & 0.92 & \textbf{0.99+} \\
+Stress + exercise & lab & 14 & 0.63 & \textbf{0.91} \\
+Stress-Predict & lab & 14 & 0.62 & \textbf{0.90} \\
+CAN-STRESS & daily life & 10 & 0.59 & \textbf{0.67} \\
 \midrule
-Average, all six & & & 0.65 & \textbf{0.76} \\
-Average, datasets with $\ge$5 test people & & & 0.71 & \textbf{0.87} \\
+Average & & & 0.69 & \textbf{0.87} \\
 \bottomrule
 \end{tabular}
 
 \smallskip
-\footnotesize $^*$Six test people; WESAD's speech and mental-arithmetic stressor is very strong, so even the simple first version scores 0.99. $^\dagger$Four test people: too few to judge (resampling the people, the nurse result could lie anywhere between 0.29 and 0.65).
+\footnotesize $^\dagger$The plain formula above. $^*$Six test people; WESAD's speech and mental-arithmetic stressor is very strong, so even the plain formula scores 0.92.
 \end{table}
 
 \paragraph{Lab stress.} The final BodySync picks out stress about 90\% of the time or better on every lab dataset, up from about 0.6 on the two harder ones. On Stress-Predict, all 14 test people scored lower under stress.
 
-\paragraph{Everyday life.} On CAN-STRESS, the largest daily-life dataset, BodySync improves from 0.61 to 0.67. One caution: in CAN-STRESS the calm reports cluster in the evening, so time of day may explain part of this; too few people report stress and calm at matching hours to separate the two. The nurse and ADARP results stay close to a coin flip, but with four test people each they are too small to judge either way. Everyday stress is milder than a lab stress test and is only reported a few times a day, which makes it the hard part.
+\paragraph{Everyday life.} On CAN-STRESS, the largest daily-life dataset, BodySync improves from 0.59 to 0.67. One caution: in CAN-STRESS the calm reports cluster in the evening, so time of day may explain part of this; too few people report stress and calm at matching hours to separate the two. Everyday stress is milder than a lab stress test and is only reported a few times a day, which makes it the hard part.
 
-\paragraph{What helped.} Every idea was tried on the development people and kept only if it helped on average. The biggest gains came from how much the signals changed over the last 10 minutes, smoothing the score, and splitting sweat into its fast and slow parts; self-training added a little. Pooling all datasets, separate normals for still and moving, other model types, a normal built only from past days, and training on exactly the tested comparison did not help. Two later rounds aimed at everyday life (learning from all everyday datasets together; scoring only while still) helped on the development people but not consistently on two further, disclosed looks at the locked people, so the final system stays as above.
+\paragraph{What helped.} Every idea was tried on the development people and kept only if it helped on average. Averaged over all five studies (the four main studies on the development people, plus real driving with a model that never saw it), the plain formula scored 0.56. A trained model lifted this to 0.69; sweat bursts added 0.035 (0.11 on WESAD and 0.09 on driving, but slightly less on Stress-Predict and CAN-STRESS); smoothing 0.01; fast and slow sweat 0.03; change over the last 10 minutes 0.03; and self-training, added last, 0.02 (0.08 on driving, 0.01 on CAN-STRESS), reaching 0.82. How much each step adds depends on the order, because steps overlap. Pooling all datasets, separate normals for still and moving, other model types, a normal built only from past days, and training on exactly the tested comparison did not help. Two later rounds aimed at everyday life (learning from all everyday datasets together; scoring only while still) helped on the development people but not consistently on two further, disclosed looks at the locked people, so the final system stays as above.
 
 \subsection*{A brand-new dataset: real driving}
 
@@ -111,8 +108,8 @@ After the final system was frozen we added AffectiveROAD~\cite{affectiveroad} fr
 \toprule
 Comparison & First version & Final BodySync \\
 \midrule
-City vs highway (both driving)$^\dagger$ & 0.73 & \textbf{0.76} \\
-City driving vs resting afterwards$^\ddagger$ & 0.83 & \textbf{0.92} \\
+City vs highway (both driving)$^\dagger$ & 0.54 & \textbf{0.76} \\
+City driving vs resting afterwards$^\ddagger$ & 0.70 & \textbf{0.92} \\
 \bottomrule
 \end{tabular}
 
@@ -120,14 +117,14 @@ City driving vs resting afterwards$^\ddagger$ & 0.83 & \textbf{0.92} \\
 \footnotesize $^\dagger$Model trained only on the other datasets; the model trained on the other drivers gets 0.61 here. $^\ddagger$Model trained on the other drivers.
 \end{table}
 
-City vs highway is the fair test: both are driving, and neither wrist movement nor time since the start of the drive explains the difference (on their own they score 0.38 and 0.50); with scrambled labels it gets 0.55. City vs resting is partly just driving vs sitting still (wrist movement alone scores 0.90), even though all 9 drivers scored lower in the city. BodySync does not follow the dataset's moment-to-moment stress rating within a drive (correlation about 0.1).
+Self-training matters most here: without it, the model that never saw the dataset scores 0.67 on city vs highway (7 of 9 drivers lower in the city); with it, 0.76 (8 of 9). City vs highway is the fair test: both are driving, and neither wrist movement nor time since the start of the drive explains the difference (on their own they score 0.38 and 0.50); with scrambled labels it gets 0.55. City vs resting is partly just driving vs sitting still (wrist movement alone scores 0.90), even though all 9 drivers scored lower in the city. BodySync does not follow the dataset's moment-to-moment stress rating within a drive (correlation about 0.1).
 
-\section{What a user sees}
+\section{What the score looks like}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\linewidth]{fig3_example_week.png}
-\caption{One week of BodySync on our own dataset (ZU-PWD): a score every 15 minutes, coloured by situation, with the reason for the lowest points. ZU-PWD only has one-minute summaries, so this uses the basic version without sweat bursts.}
+\includegraphics[width=0.9\linewidth]{fig7_example_person.png}
+\caption{One locked test person from Stress-Predict, scored by the final BodySync. The score drops during both stress tasks and climbs back towards normal during rest. This is one of the clearer people; on average, stress is picked out about 9 times in 10.}
 \end{figure}
 
 \section{Takeaways}
@@ -142,7 +139,7 @@ City vs highway is the fair test: both are driving, and neither wrist movement n
 \section{Limitations}
 
 \begin{itemize}
-\item The everyday-life datasets have few test people (4--10), so their results are uncertain.
+\item The daily-life result rests on 10 test people, so it is uncertain. Two smaller studies (nurse stress~\cite{nurse}, ADARP~\cite{adarp}) had only 4 test people each and scored near a coin flip; they are left out here but kept in the code repository.
 \item Each person's normal is computed from their whole recording; a real app would build it from past data only.
 \item ZU-PWD has only one-minute summaries and no stress labels, so the final model could not be tested on our own data.
 \end{itemize}

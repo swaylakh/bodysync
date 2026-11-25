@@ -1,10 +1,14 @@
 # BodySync
 
-A 0–100 score for how far your body is from **your own normal** right now, from wrist heart rate, sweat (EDA) and skin temperature. 100 means exactly your normal; lower means further away in the stressed direction. Built on everyday Empatica EmbracePlus data (ZU-PWD '25) and tested on 8 public Empatica E4 stress datasets.
+A 0–100 score for how far your body is from **your own normal** right now, from wrist heart rate, sweat (EDA) and skin temperature. 100 means exactly your normal; lower means further away in the stressed direction. Built on everyday Empatica EmbracePlus data (ZU-PWD '25) and tested on public Empatica E4 stress datasets.
 
 ## Final system (final presentation)
 
-`src/final_eval.py`. The deck is `docs/slides/BodySync_Final.pptx` and the report is `report/overleaf_final.tex`, compiled as `report/overleaf_final.pdf`. For Overleaf, upload `figures/fig3_example_week.png` with it.
+`src/final_eval.py`. The deck is `docs/slides/BodySync_Final.pptx` (PDF copy alongside) and the report is `report/overleaf_final.tex`, compiled as `report/overleaf_final.pdf`. For Overleaf, upload `figures/fig7_example_person.png` with it.
+
+The deck and report present the four main studies (WESAD, Stress + exercise, Stress-Predict, CAN-STRESS) plus real driving. The nurse and ADARP studies had only 4 locked test people each and scored near a coin flip; they are kept below for the record and mentioned in the report's limitations.
+
+In the deck and report, "first version" means the **plain formula without sweat bursts**, scored on the same people (`src/plain_formula.py` → `results/plain_formula.csv`): locked test WESAD 0.92, Stress + exercise 0.63, Stress-Predict 0.62, CAN-STRESS 0.59 (average 0.69); driving city vs highway 0.54. The step-by-step chart (deck slide 9) averages the four main studies on DEV (rounds 15–16 in `results/iteration_log.csv`) and driving (`results/driving_order_self_last.csv`).
 
 The sections after "The score" record the earlier stages: the sync idea, the first formula, and the richer features. Their numbers come from before the final push.
 
@@ -27,10 +31,10 @@ The sections after "The score" record the earlier stages: the sync idea, the fir
 | CAN-STRESS | 10 | 0.61 | 0.59 | **0.67** |
 | Nurse stress* | 4 | 0.52 | 0.44 | 0.50 |
 | ADARP* | 4 | 0.53 | 0.48 | 0.55 |
-| **Average, all six** | | 0.65 | 0.64 | **0.76** |
-| **Average, datasets with ≥ 5 test people** | | 0.71 | 0.73 | **0.87** |
+| **Average, four main studies (≥ 5 test people)** | | 0.71 | 0.73 | **0.87** |
+| Average, all six | | 0.65 | 0.64 | 0.76 |
 
-\* Too few test people to judge. Resampling people gives a 95% range of 0.29–0.65 for nurses and 0.49–0.61 for ADARP (`results/audit.csv`). The all-six average is the one fixed before testing; the ≥ 5 average was added afterwards to set these two aside.
+\* Too few test people to judge. Resampling people gives a 95% range of 0.29–0.65 for nurses and 0.49–0.61 for ADARP (`results/audit.csv`). The all-six average is the one fixed before testing; the four-study average was added afterwards to set these two aside.
 
 Notes:
 - **Leak check:** with each person's labels shuffled, the final system scores 0.51.
