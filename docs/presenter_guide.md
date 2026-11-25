@@ -104,6 +104,108 @@ Each person hands over with one line: Ananya → "Swayam will show how it learns
 **Slide 14, thank you.**
 - "Thank you. We're happy to take questions."
 
+## Deeper detail, in case you're asked
+
+You don't present these. Read your own part once so you can answer a follow-up.
+
+### Ananya: the formula, the sync idea, the signals
+
+**The formula, worked through.**
+
+| Signal | Your normal | Your usual spread | Right now | z (stress direction only) |
+|---|---|---|---|---|
+| Heart rate | 70 bpm | 5 bpm | 80 bpm | (80 − 70) / 5 = **+2** |
+| Sweat | your usual level | your usual spread | 2 spreads up | **+2** |
+| Skin temperature | your usual level | your usual spread | normal | **0** |
+
+- distance = √((2² + 2² + 0²) / 3) = √(8/3) ≈ **1.63**
+- score = 100 / (1 + 1.63 / 2) = 100 / 1.82 ≈ **55**
+- At your normal, distance = 0, so the score is 100. Two spreads off on everything gives 50; six spreads off gives 25. It never reaches 0.
+
+**Follow-ups on the formula.**
+- *"What exactly is the normal and the spread?"* Normal = your median. Spread = a robust version of the standard deviation (the median distance from the median, × 1.48). A few odd moments don't throw it off the way they would a standard deviation.
+- *"Why only one direction?"* A heart rate below your normal, or warmer hands, isn't stress, so those count as 0.
+- *"Why the ½?"* So that being two spreads off lands at exactly 50.
+- *"Is sweat measured in raw units?"* On a log scale, because sweat varies hugely between people.
+- *"Is there a minimum spread?"* Yes: 2 bpm for heart rate and 0.1 °C for temperature, so a very steady person doesn't get huge z-scores from tiny changes.
+
+**The sync idea (slide 2).**
+- We measured how strongly each pair of signals rises and falls together (heart rate–sweat, heart rate–temperature, sweat–temperature), in 30-minute windows.
+- It was tested on our own dataset (ZU-PWD, 27 people, Empatica EmbracePlus) and on WESAD.
+- 37% vs 33%: given only sync, a model told asleep, resting and active apart 37% of the time; guessing among three gets 33%.
+- 46% vs 50%: on WESAD, a stressed moment scored lower than a calm one only 46% of the time.
+
+**The signals.**
+- *Sweat:* the watch passes a tiny current between two skin contacts. More sweat means more conductance.
+- *Sweat bursts:* short spikes in that signal, about 2 a minute at rest and about 10 a minute under stress. You don't feel them.
+- *Hands cool:* under stress blood moves away from the skin towards the core, so wrist temperature drops.
+
+### Swayam: the model, the tests, the numbers
+
+**What "90%" is exactly.** For each hidden person: every pair of (one stressed moment, one calm moment), and how often the stressed one scores lower. Then average over people. 50% = coin flip. The stats name is a within-person AUC.
+
+**The model.**
+- XGBoost: many small decision trees voting together.
+- Its inputs are all distances from your own normal: heart rate, sweat, temperature, sweat bursts, heart-rate variability, how each changed over the last 10 minutes, the fast and slow parts of sweat, and whether heart rate and temperature are rising or falling.
+- Hidden people are scored by a model trained only on the 60% group, never on them.
+
+**Self-training, step by step.**
+1. The trained model scores all of a person's unmarked time.
+2. The 10% that look most stressed become "stress" examples, and the 10% that look calmest become "calm".
+3. The model retrains once with those added, then scores that person.
+- We tried weighting those examples ×3 and ×10: no gain.
+- We tried retraining continuously using only past data, like a live app would: no gain over doing it once.
+
+**The fairness checks.**
+- *Scrambled labels:* shuffling which moments are "stress" within each person drops the average to 0.51, a coin flip.
+- *Wrist movement removed from the model:* WESAD 99%+, Stress + exercise 91%, Stress-Predict 88%. So it isn't just detecting movement.
+- *Rest right after a stressor left out:* 99%+, 91%, 90%. So it isn't just "before vs after".
+- *Honest caveat:* in lab studies stress always happens at the same point in the session, so the clock alone also scores high (WESAD 97%, Stress-Predict 96%). BodySync never sees the clock, but lab data alone can't fully rule this out. That's why the driving test matters.
+
+**How we iterated.** Every idea was tried on the 60% group and logged; 17 rounds in total. We kept an idea only if it raised the average and didn't drop any study by more than 3 points.
+- Didn't help: pooling all datasets, separate normals for still vs moving, other model types, a normal built only from past days, and a few "are you stressed?" answers per person (84% → 83% on the hidden people).
+
+**Remove one step from the finished system.**
+
+| Step removed | Drop (five-study average) |
+|---|---|
+| Change over last 10 min | −3.0 |
+| Smoothing | −2.4 |
+| Self-training | −1.9 (−8 on driving) |
+| Fast / slow sweat | −1.2 |
+| Sweat bursts | −0.3 |
+
+**Averages on the hidden 40% (four main studies):** first version 69%, final 87%.
+
+### Bhavya: the studies, driving, the example person
+
+**AffectiveROAD (driving).**
+- From the MIT Media Lab: 9 drivers, 13 real drives, the same Empatica wristband.
+- Each drive starts and ends with a 15-minute parked rest.
+- The dataset's own stress rating confirms the city is the stressful part: 0.70–0.84 in the city, about 0.5 on the highway.
+- Nothing was tuned on it. The finished system was run once.
+
+**Driving checks, city vs highway.**
+- Wrist movement alone scores 38%, and time since the start of the drive 50%. Neither explains the 76%.
+- With scrambled labels: 55%.
+- A model trained only on the other drivers gets 61%. The model that never saw any driving data gets 76%, thanks to self-training.
+- City vs parked rest: 92%, all 9 drivers lower in the city. But wrist movement alone gets 90% there, so it's partly just moving vs sitting.
+- *Honest caveat:* it doesn't follow the dataset's moment-to-moment stress rating within a drive (correlation about 0.1). It tells city from highway, not every small spike.
+
+**CAN-STRESS (everyday life).**
+- 62 people rating their own stress 0–9 during normal days; 10 of them were hidden for the test.
+- First version 59%, final 67%.
+- *Caveat:* the calm reports cluster in the evening, so time of day may explain part of it.
+
+**The example person (slide 12).**
+- Stress-Predict person S07, one of the hidden 40%.
+- The score falls to about 42 during the colour-word test and about 15 during the interview, then recovers to 75–95 during rest.
+- It's a clear example. Not every person looks this clean, which is why we quote the average (about 9 in 10).
+
+**Why only five studies?** Two more (nurses at work, and ADARP) had only 4 hidden people each and scored near a coin flip. That's too few to judge, so we left them out. They're still in the code and the report's limitations.
+
+**Citations.** Counted on OpenAlex in November 2026.
+
 ## If you're asked
 
 - **"Did you just tweak it until it looked good?"** (Swayam) No. We hid 40% of the people at the start and only tested on them once, at the very end.
