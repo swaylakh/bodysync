@@ -1,0 +1,9 @@
+self_training,setup,comparison,auc,lower_in_stress
+False,new dataset (never saw it),city vs highway,0.672,7/9
+False,new dataset (never saw it),city vs rest,0.673,6/9
+False,new people,city vs highway,0.601,4/9
+False,new people,city vs rest,0.923,9/9
+True,new dataset (never saw it),city vs highway,0.755,8/9
+True,new dataset (never saw it),city vs rest,0.673,7/9
+True,new people,city vs highway,0.613,6/9
+True,new people,city vs rest,0.92,9/9

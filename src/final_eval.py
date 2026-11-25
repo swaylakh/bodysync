@@ -53,7 +53,12 @@ BASE = {"change": False, "calib": False, "smooth": False, "pooled": False, "shap
         "context": False, "quality": False, "selftrain": False, "model": "xgb", "blend": False,
         "lookback": False, "pool_life": False, "life_model": None, "lab_helper": 0.0, "pseudo": PSEUDO_SHARE,
         "other_datasets": False, "drop": (), "selftrain_on": "unlabelled", "train_labels": None,
-        "smooth_life": SMOOTH["free-living"], "still_only": None}
+        "smooth_life": SMOOTH["free-living"], "still_only": None, "pseudo_weight": 1.0,
+        "selftrain_rolling": False}
+# selftrain_rolling: keep re-tuning as data comes in. The person's recording is cut into chunks in time (each day in
+#   everyday data, each quarter of the session in the lab); a chunk is scored by a model re-tuned only on the
+#   person's unlabelled windows from BEFORE that chunk (past only, as an app would run). Chunk 0 = untuned model.
+# pseudo_weight: how much each self-training example of the person being scored counts vs other people's windows
 # smooth_life: smoothing window for everyday data. still_only: everyday data is scored (and trained) only on
 #   windows where the person moves at most their own `still_only` quantile of movement (as watches do)
 # train_labels: name of an allw column with other labels to TRAIN on (evaluation keeps `label`)
@@ -169,6 +174,38 @@ def fit_score(X: pd.DataFrame, allw: pd.DataFrame, train: np.ndarray, extra: np.
     return 100 * (1 - clf.predict_proba(X[test])[:, 1])
 
 
+def rolling_selftrain(Xc, allw, train, me, still, s, cfg, fit, life) -> np.ndarray:
+    """Self-training that keeps re-tuning over time, using only the person's PAST unlabelled windows."""
+    idx = np.where(me)[0]
+    base = pd.Series(s, index=idx)
+    out = base.copy()
+    start = allw.start.iloc[idx]
+    if start.isna().all():
+        return out.to_numpy()
+    if life:
+        chunk = start.dt.floor("D")
+    else:
+        t0, t1 = start.min(), start.max()
+        chunk = ((start - t0) / max(t1 - t0, pd.Timedelta(seconds=1)) * 4).clip(upper=3.999).fillna(-1).astype(int)
+    unl_mask = still[idx] & ~allw.labelled.iloc[idx].to_numpy()
+    for c in sorted(chunk.dropna().unique())[1:]:
+        cur = (chunk == c).to_numpy()
+        past_unl = idx[(chunk < c).to_numpy() & unl_mask]
+        if len(past_unl) < 20:
+            continue
+        su = base[past_unl]
+        k = max(1, int(cfg["pseudo"] * len(past_unl)))
+        lo, hi = su.nsmallest(k).index, su.nlargest(k).index
+        pseudo = np.zeros(len(allw), bool)
+        pseudo[lo] = pseudo[hi] = True
+        y_ps = allw.y.copy()
+        y_ps.iloc[lo], y_ps.iloc[hi] = 1, 0
+        test = np.zeros(len(allw), bool)
+        test[idx[cur]] = True
+        out[idx[cur]] = fit_score(Xc, allw, train, pseudo, test, y_ps, extra_weight=cfg["pseudo_weight"], **fit)
+    return out.to_numpy()
+
+
 def smooth(allw: pd.DataFrame, score: pd.Series, life: str = SMOOTH["free-living"]) -> pd.Series:
     """Past-only rolling mean of the score per person (stress lasts minutes, not seconds)."""
     out = score.copy()
@@ -233,7 +270,9 @@ def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool | str 
             train = (trainable & pool).to_numpy() & ~me
             extra = me & allw.calib.to_numpy() if cfg["calib"] else np.zeros(len(allw), bool)
             s = fit_score(Xc, allw, train, extra, me, **fit)
-            if cfg["selftrain"]:   # adapt to this person with their own unlabelled windows
+            if cfg["selftrain"] and cfg["selftrain_rolling"]:
+                s = rolling_selftrain(Xc, allw, train | extra, me, still, s, cfg, fit, life)
+            elif cfg["selftrain"]:   # adapt to this person with their own unlabelled windows
                 unl = np.where(me & still & (True if cfg["selftrain_on"] == "all" else ~allw.labelled.to_numpy()))[0]
                 if len(unl) >= 20:
                     su = pd.Series(s, index=np.where(me)[0])[unl]
@@ -243,7 +282,7 @@ def run(cfg: dict, allw: pd.DataFrame, X: dict, group: str, shuffle: bool | str 
                     pseudo[lo] = pseudo[hi] = True
                     y_ps = allw.y.copy()
                     y_ps.iloc[lo], y_ps.iloc[hi] = 1, 0
-                    s = fit_score(Xc, allw, train | extra, pseudo, me, y_ps, extra_weight=1.0, **fit)
+                    s = fit_score(Xc, allw, train | extra, pseudo, me, y_ps, extra_weight=cfg["pseudo_weight"], **fit)
             score[me] = s
     score[~still] = np.nan
     if cfg["blend"]:   # average with the hand-made BodySync formula (+ sweat bursts), same 0-100 scale
@@ -491,6 +530,41 @@ def main():
             ev = event_eval(allw, score, "dev").assign(round="9", idea=idea)
             print(ev.round(3).to_string(index=False), flush=True)
             ev.to_csv(EVENTS, mode="a", header=False, index=False)
+    if args.round == 10:  # round 10: count the scored person's own self-training examples more (DEV only)
+        log("10", "final system", run(FINAL, allw, X, "dev"))
+        for w in (3, 10):
+            log("10", f"+ self-training examples weighted x{w}", run({**FINAL, "pseudo_weight": w}, allw, X, "dev"))
+    if args.round == 11:  # round 11: keep re-tuning over time from past data only (DEV only)
+        log("11", "final system (one-off self-training)", run(FINAL, allw, X, "dev"))
+        log("11", "no self-training", run({**FINAL, "selftrain": False}, allw, X, "dev"))
+        log("11", "keep re-tuning over time (past data only)", run({**FINAL, "selftrain_rolling": True}, allw, X, "dev"))
+    if args.round == 12:  # round 12: self-training on its own, on top of the plain trained model (DEV only)
+        log("12", "base: trained", run(BASE, allw, X, "dev"))
+        log("12", "base + self-training only", run({**BASE, "selftrain": True}, allw, X, "dev"))
+        log("12", "base + self-training only, past data only", run({**BASE, "selftrain": True, "selftrain_rolling": True}, allw, X, "dev"))
+    if args.round == 14:  # round 14: the final steps added in a different order, self-training first (DEV only)
+        order = [("self-training", {"selftrain": True}), ("smoothing", {"smooth": True}),
+                 ("fast/slow sweat + trends", {"shape": True}), ("change over 10 min", {"change": True})]
+        cfg = dict(BASE)
+        log("14", "base: trained", run(cfg, allw, X, "dev"))
+        for name, step in order:
+            cfg = {**cfg, **step}
+            log("14", f"+ {name}", run(cfg, allw, X, "dev"))
+    if args.round == 15:  # round 15: same steps, self-training added LAST (DEV only)
+        order = [("smoothing", {"smooth": True}), ("fast/slow sweat + trends", {"shape": True}),
+                 ("change over 10 min", {"change": True}), ("self-training", {"selftrain": True})]
+        cfg = dict(BASE)
+        log("15", "base: trained", run(cfg, allw, X, "dev"))
+        for name, step in order:
+            cfg = {**cfg, **step}
+            log("15", f"+ {name}", run(cfg, allw, X, "dev"))
+    if args.round == 16:  # round 16: sweat bursts as their own step - trained model without them (DEV only)
+        log("16", "base: trained, no sweat bursts", run({**BASE, "drop": ("z_scr", "d_z_scr")}, allw, X, "dev"))
+    if args.round == 13:  # round 13: which step overlaps with self-training? each feature with and without it (DEV only)
+        for name, step in [("change over 10 min", {"change": True}), ("smoothing", {"smooth": True}),
+                           ("fast/slow sweat + trends", {"shape": True})]:
+            log("13", f"base + {name}", run({**BASE, **step}, allw, X, "dev"))
+            log("13", f"base + {name} + self-training", run({**BASE, **step, "selftrain": True}, allw, X, "dev"))
 
 
 if __name__ == "__main__":

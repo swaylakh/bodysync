@@ -1,0 +1,7 @@
+step,auc,lower_in_stress
+"base: trained, no sweat bursts",0.593,7/9
+base: trained,0.685,9/9
++ smoothing,0.709,9/9
++ fast/slow sweat + trends,0.636,8/9
++ change over 10 min,0.672,7/9
++ self-training,0.755,8/9
