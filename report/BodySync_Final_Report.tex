@@ -47,7 +47,6 @@ The first version of the personal-normal score (``first version'' below) was a p
 \toprule
 Dataset & Setting & People & Citations & Stress label \\
 \midrule
-ZU-PWD '25~\cite{zupwd} (ours) & daily life & 27 & -- & none (used for the first idea) \\
 WESAD~\cite{wesad} & lab & 15 & 1{,}352 & speech + maths test \\
 AffectiveROAD~\cite{affectiveroad} (new) & real driving & 9 & 125 & city traffic vs highway \\
 Stress-Predict~\cite{stresspredict} & lab & 35 & 113 & Stroop test + interview \\
@@ -57,7 +56,7 @@ CAN-STRESS~\cite{canstress} & daily life & 62 & 1 & stress ratings 0--9 \\
 \end{tabular}
 \end{table}
 
-All five stress datasets use the Empatica E4, the older version of the EmbracePlus in our own dataset, which records the same signals.
+All five stress datasets use the same wristband, the Empatica E4.
 
 \section{How we tested it}
 
@@ -91,11 +90,30 @@ Average & & & 0.69 & \textbf{0.87} \\
 \footnotesize $^\dagger$The plain formula above. $^*$Six test people; WESAD's speech and mental-arithmetic stressor is very strong, so even the plain formula scores 0.92.
 \end{table}
 
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{fig8_first_vs_final.png}
+\caption{First version (plain formula) against the final BodySync, on people it never saw: the locked test people of the four main studies, and all nine drivers of AffectiveROAD (city vs highway, a dataset it never saw). The dashed line is a coin flip.}
+\end{figure}
+
 \paragraph{Lab stress.} The final BodySync picks out stress about 90\% of the time or better on every lab dataset, up from about 0.6 on the two harder ones. On Stress-Predict, all 14 test people scored lower under stress.
 
 \paragraph{Everyday life.} On CAN-STRESS, the largest daily-life dataset, BodySync improves from 0.59 to 0.67. One caution: in CAN-STRESS the calm reports cluster in the evening, so time of day may explain part of this; too few people report stress and calm at matching hours to separate the two. Everyday stress is milder than a lab stress test and is only reported a few times a day, which makes it the hard part.
 
 \paragraph{What helped.} Every idea was tried on the development people and kept only if it helped on average. Averaged over all five studies (the four main studies on the development people, plus real driving with a model that never saw it), the plain formula scored 0.56. A trained model lifted this to 0.69; sweat bursts added 0.035 (0.11 on WESAD and 0.09 on driving, but slightly less on Stress-Predict and CAN-STRESS); smoothing 0.01; fast and slow sweat 0.03; change over the last 10 minutes 0.03; and self-training, added last, 0.02 (0.08 on driving, 0.01 on CAN-STRESS), reaching 0.82. How much each step adds depends on the order, because steps overlap. Pooling all datasets, separate normals for still and moving, other model types, a normal built only from past days, and training on exactly the tested comparison did not help. Two later rounds aimed at everyday life (learning from all everyday datasets together; scoring only while still) helped on the development people but not consistently on two further, disclosed looks at the locked people, so the final system stays as above.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{fig9_steps.png}
+\caption{What each step added, in the order it was built, averaged over the five studies (the four main studies on the development people, plus driving). Self-training, in gold, is added last.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{fig10_drop_one.png}
+\caption{Taking one step out of the finished system at a time. The gain is spread out: no single step carries it, and sweat bursts matter little once the other sweat features are in.}
+\end{figure}
 
 \subsection*{A brand-new dataset: real driving}
 
@@ -144,7 +162,7 @@ Self-training matters most here: without it, the model that never saw the datase
 \item \textbf{Everyday life.} Everyday stress is milder and rated only a few times a day. In CAN-STRESS the calm ratings cluster in the evening, so time of day may explain part of the gain from 0.59 to 0.67.
 \item \textbf{The normal uses the whole recording.} Each person's normal is computed from all of their data, including later days; a real app would only have the past. A past-only normal was tried and did not help on the development people.
 \item \textbf{Coarse in time.} BodySync tells stressful stretches from calm ones, but it does not follow moment-to-moment stress: on AffectiveROAD it hardly tracks the drivers' own continuous stress rating (correlation about 0.1).
-\item \textbf{One device family, no own labels.} Every stress dataset used the Empatica E4. Our own dataset, ZU-PWD (EmbracePlus), has only one-minute summaries and no stress labels, so the final model could not be tested on it, or on any other wristband.
+\item \textbf{One device family.} Every stress dataset used the Empatica E4, so other wristbands are untested.
 \item \textbf{Self-training is a small, uneven gain.} It adds about 0.02 on average, mostly on real driving (0.08); on the lab studies it adds almost nothing.
 \end{itemize}
 
@@ -154,7 +172,6 @@ Code and all results: \url{https://github.com/swaylakh/bodysync}
 \begin{thebibliography}{9}
 \setlength{\itemsep}{0pt}
 \bibitem{sun2026trust} X.~Sun, R.~Ma, S.~Wei, P.~Cesar, J.~A.~Bosch, A.~El~Ali. Understanding trust toward human versus AI-generated health information through behavioral and physiological sensing. \emph{International Journal of Human-Computer Studies}, 209:103714, 2026.
-\bibitem{zupwd} Evangelista et al. Zayed University Physiological Wellness Dataset 2025 (ZU-PWD '25). IEEE DataPort, 2025. doi:10.21227/2tth-wj12.
 \bibitem{wesad} P.~Schmidt, A.~Reiss, R.~D\"urichen, C.~Marberger, K.~Van~Laerhoven. Introducing WESAD, a multimodal dataset for wearable stress and affect detection. \emph{ICMI}, 2018.
 \bibitem{stresspredict} T.~Iqbal et al. Stress monitoring using wearable sensors: a pilot study and Stress-Predict dataset. \emph{Sensors}, 22(21):8135, 2022.
 \bibitem{stressexercise} A.~Hongn, F.~Bosch, L.~E.~Prado, J.~M.~Ferr\'andez~Vicente, M.~P.~Bonomini. Wearable physiological signals under acute stress and exercise conditions. \emph{Scientific Data}, 12:520, 2025.

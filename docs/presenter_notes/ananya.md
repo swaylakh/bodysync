@@ -117,7 +117,7 @@ For every 30 minutes, we measured how strongly each pair of signals rises and fa
 The Empatica watch labels them itself. Rest means awake and still; active means awake and moving.
 
 **"What data was the sync test on?"**
-Our own dataset, ZU-PWD (27 people, wearing the newer Empatica EmbracePlus for days), and the WESAD lab study for stress.
+An everyday-life dataset of 27 people wearing an Empatica wristband for days, and the WESAD lab study for stress.
 
 **"How does the watch measure sweat?"**
 It passes a tiny current between two contacts on your skin. More sweat means the skin conducts better. That's called EDA (electrodermal activity).

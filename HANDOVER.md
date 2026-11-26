@@ -8,13 +8,13 @@ Team: Swayam Lakhotia, Ananya Khaitan, Bhavya Bajaj. Code: https://github.com/sw
 | What | File |
 |---|---|
 | Final slides (15 slides) | `docs/slides/BodySync_Final.pptx` (PDF copy: `docs/slides/BodySync_Final.pdf`) |
-| Final report (5 pages) | `report/BodySync_Final_Report.pdf` |
-| Report source (LaTeX) | `report/BodySync_Final_Report.tex` + `figures/fig7_example_person.png` |
+| Final report (6 pages) | `report/BodySync_Final_Report.pdf` |
+| Report source (LaTeX) | `report/BodySync_Final_Report.tex` + figures `fig7`–`fig10` in `figures/` (made by `src/report_figures.py`) |
 | Interactive 3D walkthrough | `docs/interactive/BodySync_3D.html` (open in a browser; needs internet for the 3D library) |
 | Presenter guide | `docs/presenter_guide.md`, with detailed notes per person in `docs/presenter_notes/` |
 | Full technical write-up | `README.md` |
 
-To rebuild the report PDF: `pdflatex BodySync_Final_Report.tex` inside `report/` (or upload the .tex and `figures/fig7_example_person.png` to Overleaf).
+To rebuild the report PDF: `pdflatex BodySync_Final_Report.tex` inside `report/` (or upload the .tex and figures `fig7`–`fig10` to Overleaf).
 
 ## Folder map
 
@@ -39,12 +39,10 @@ data/                not included, see below
 ## Datasets (not included)
 
 The raw data is about 7 GB and each public dataset has its own licence, so it is not uploaded here.
-Download links and where each one goes are in `README.md` under "Getting the data"; our own dataset
-(ZU-PWD '25) is described in `data/DATASET_SOURCE.md`.
+Download links and where each one goes are in `README.md` under "Getting the data".
 
 | Dataset | Used for | Source |
 |---|---|---|
-| ZU-PWD '25 | the first idea (sync) | IEEE DataPort, doi:10.21227/2tth-wj12 |
 | WESAD | lab stress | https://uni-siegen.sciebo.de/s/HGdUkoNlW1Ub0Gx |
 | Stress-Predict | lab stress | https://github.com/italha-d/Stress-Predict-Dataset |
 | Stress + exercise | lab stress | https://physionet.org/content/wearable-device-dataset/1.0.1/ |
