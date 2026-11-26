@@ -113,6 +113,10 @@ h1 em,h2 em{font-style:italic;color:var(--calm)}
 /* road */
 .seg{font:400 clamp(40px,5vw,72px)/1 var(--serif);font-style:italic;transition:color .6s;text-shadow:0 2px 24px rgba(0,0,0,.8)}
 .small{text-shadow:0 0 14px rgba(0,0,0,.95)}
+.drvhud{width:min(400px,calc(100vw - 44px));padding:14px 16px;border-radius:16px;background:rgba(4,7,11,.62);backdrop-filter:blur(8px);border:1px solid var(--line)}
+.drvhud .seg{font-size:clamp(34px,3.6vw,52px)}
+.rdn{font:400 clamp(40px,4vw,56px)/1 var(--mono);letter-spacing:-.04em;font-variant-numeric:tabular-nums;transition:color .4s}
+#rdSpark{display:block;width:100%;height:64px;margin:12px 0 8px}
 .res{display:grid;gap:14px;text-align:right;padding:16px 18px;border-radius:16px;background:rgba(4,7,11,.62);backdrop-filter:blur(8px);border:1px solid var(--line)}
 .res .big{font:400 clamp(60px,7vw,104px)/.9 var(--mono);letter-spacing:-.05em}
 .res .line{display:grid;grid-template-columns:minmax(0,1fr) 140px 34px;gap:10px;align-items:center;font-size:12.5px;color:var(--soft);text-align:left}
@@ -199,9 +203,15 @@ h1 em,h2 em{font-style:italic;color:var(--calm)}
     <p class="lede">9 drivers in the AffectiveROAD study. City traffic against the highway: both are driving, so arm movement can't fake it.</p>
   </div>
   <div class="blk" style="left:max(22px,6vw);bottom:calc(104px + env(safe-area-inset-bottom,0px));--d:1">
-    <div class="small">Now driving</div>
-    <div class="seg" id="rdSeg">Parked</div>
-    <div class="small" id="rdRate" style="margin-top:8px;text-transform:none;letter-spacing:.04em">Parked rest, not part of the comparison</div>
+    <div class="drvhud">
+      <div style="display:flex;justify-content:space-between;align-items:end;gap:16px">
+        <div><div class="small">Now</div><div class="seg" id="rdSeg">Parked</div></div>
+        <div style="text-align:right"><div class="small">BodySync score</div><div class="rdn" id="rdN">73</div></div>
+      </div>
+      <canvas id="rdSpark" aria-label="The score over this drive so far"></canvas>
+      <div class="small" id="rdRate" style="text-transform:none;letter-spacing:.04em">Parked rest before the drive</div>
+      <div class="small" style="text-transform:none;letter-spacing:.03em;margin-top:6px;opacity:.8">One real drive, the clearest of 13, scored minute by minute by the final BodySync, which never saw this study.</div>
+    </div>
   </div>
   <div class="blk res" style="right:max(22px,6vw);bottom:calc(104px + env(safe-area-inset-bottom,0px));--d:2;width:min(360px,calc(100vw - 44px))">
     <div><div class="small">8 of 9 drivers lower in the city</div><div class="big">76%</div><div style="font-size:13px;color:var(--soft);margin-top:6px">A city moment scores lower than a highway moment 76% of the time.</div></div>
@@ -738,24 +748,33 @@ const ROAD = (() => {
     const hl = new THREE.Mesh(new THREE.BoxGeometry(.2,.07,.04), new THREE.MeshBasicMaterial({color:0xffffff})); hl.position.set(sx, FLOOR_Y + .42, -1.06); hl.material.color.multiplyScalar(2); car.add(hl); }
   const beamG = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 9), new THREE.MeshBasicMaterial({color:0xfff3dd, transparent:true, opacity:.05, depthWrite:false, blending:THREE.AdditiveBlending}));
   beamG.rotation.x = -Math.PI/2; beamG.position.set(0, FLOOR_Y + .03, -5.6); car.add(beamG);
-  let cz = 0, cv = 0, rest = 0, seg = "Parked", fade = 1, T = 0;
+  const glowM = new THREE.Mesh(new THREE.CircleGeometry(1.5, 40), new THREE.MeshBasicMaterial({color:0x43d3c3, transparent:true, opacity:.35, depthWrite:false, blending:THREE.AdditiveBlending}));
+  glowM.rotation.x = -Math.PI/2; glowM.scale.set(.9, 1.45, 1); glowM.position.set(0, FLOOR_Y + .025, 0); car.add(glowM);
+  // one real drive (AffectiveROAD Drv1): [minute, BodySync score, R rest / P car park / C city / H highway]
+  const DRIVE = [[3.0,64,"R"],[3.5,68,"R"],[4.0,73,"R"],[4.5,76,"R"],[5.0,80,"R"],[5.5,83,"R"],[6.0,83,"R"],[6.5,82,"R"],[7.0,82,"R"],[7.5,83,"R"],[8.0,83,"R"],[8.5,84,"R"],[9.0,84,"R"],[9.5,83,"R"],[10.0,79,"R"],[10.5,72,"R"],[11.0,68,"R"],[11.5,63,"R"],[12.0,62,"R"],[12.5,64,"R"],[13.0,65,"R"],[13.5,65,"R"],[14.0,64,"R"],[14.5,66,"R"],[15.0,66,"R"],[15.5,68,"R"],[16.0,70,"R"],[19.0,35,"P"],[19.5,38,"P"],[20.0,40,"P"],[22.0,61,"C"],[22.5,51,"C"],[23.0,47,"C"],[23.5,44,"C"],[24.0,37,"C"],[24.5,36,"C"],[29.5,92,"H"],[30.0,85,"H"],[30.5,78,"H"],[31.0,77,"H"],[31.5,78,"H"],[32.0,83,"H"],[36.5,51,"C"],[37.0,57,"C"],[37.5,50,"C"],[38.0,40,"C"],[38.5,32,"C"],[39.0,21,"C"],[39.5,16,"C"],[40.0,20,"C"],[40.5,23,"C"],[41.0,23,"C"],[41.5,22,"C"],[42.0,20,"C"],[42.5,20,"C"],[43.0,26,"C"],[43.5,33,"C"],[44.0,41,"C"],[44.5,42,"C"],[45.0,42,"C"],[48.5,27,"C"],[49.0,37,"C"],[49.5,37,"C"],[50.0,41,"C"],[50.5,50,"C"],[51.0,52,"C"],[51.5,61,"C"],[52.0,70,"C"],[52.5,73,"C"],[53.0,75,"C"],[53.5,70,"C"],[54.0,63,"C"],[54.5,56,"C"],[57.0,82,"H"],[57.5,83,"H"],[58.0,84,"H"],[58.5,86,"H"],[59.0,89,"H"],[59.5,91,"H"],[60.0,91,"H"],[64.5,15,"C"],[65.0,14,"C"],[65.5,13,"C"],[66.0,14,"C"],[66.5,17,"C"],[68.5,35,"P"],[69.0,37,"P"],[69.5,39,"P"],[72.0,48,"R"],[72.5,51,"R"],[73.0,51,"R"],[73.5,51,"R"],[74.0,55,"R"],[74.5,56,"R"],[75.0,57,"R"],[75.5,59,"R"],[76.0,59,"R"],[76.5,56,"R"],[77.0,57,"R"],[77.5,56,"R"],[78.0,48,"R"],[78.5,48,"R"],[79.0,45,"R"],[79.5,41,"R"],[80.0,42,"R"],[80.5,38,"R"],[81.0,33,"R"],[81.5,33,"R"],[82.0,35,"R"],[82.5,37,"R"],[83.0,45,"R"],[83.5,52,"R"],[84.0,58,"R"],[84.5,64,"R"],[85.0,62,"R"]];
+  // road segment k covers these drive minutes (borders halfway between the labelled stretches)
+  const SEGT = [[0,21],[21,27],[27,34.25],[34.25,55.75],[55.75,62.25],[62.25,67.5],[67.5,86]];
+  const scoreAtT = m => { if (m <= DRIVE[0][0]) return DRIVE[0][1]; for (let i=1;i<DRIVE.length;i++){ if (m <= DRIVE[i][0]){ const a = DRIVE[i-1], b = DRIVE[i]; return b[0]-a[0] > 1.6 ? NaN : a[1] + (b[1]-a[1])*(m-a[0])/(b[0]-a[0]); } } return DRIVE[DRIVE.length-1][1]; };
+  const codeAt = m => { let c = DRIVE[0][2]; for (const w of DRIVE){ if (w[0] > m) break; c = w[2]; } return c; };
+  let cz = 0, cv = 0, seg = "Parked", fade = 1, T = 0, tm = 0, shown = 73;
   const camP = new THREE.Vector3(), camL = new THREE.Vector3(); let camInit = false;
   return {
     group:g, dur: 40,
-    enter(){ cz = 2; cv = 0; rest = 0; fade = 1; camInit = false; },
+    enter(){ tm = reduce ? 40 : 0; cz = 2; cv = 0; fade = 1; camInit = false; },
     update(dt, t){
       T += dt*(reduce ? .3 : 1);
       // traffic lights
       tl.forEach((l,i) => { const red = isRed(l, T); tlp.pos.set([-4.9, FLOOR_Y + 3.6, l.z], i*6); tlp.pos.set([4.9, FLOOR_Y + 3.6, l.z], i*6+3);
         const c = red ? new THREE.Color(2.4,.35,.3) : new THREE.Color(.3,2.0,1.7); tlp.col.set([c.r,c.g,c.b,c.r,c.g,c.b], i*6); tlp.al[i*2] = tlp.al[i*2+1] = 1; }); tlp.dirty();
-      // our car
-      seg = segAt(cz);
-      let vt = seg === "Highway" ? 26 : seg === "City" ? 9.5 : 4;
-      if (rest < 2.2){ rest += dt; vt = 0; }
-      if (seg === "City") for (const l of tl){ const dz = cz - (l.z + 2.4); if (dz > 0 && dz < 9 && isRed(l, T)) vt = Math.min(vt, Math.max(0, (dz - .6)*1.6)); }
-      if (reduce) vt *= .35;
-      cv += (vt - cv)*(1 - Math.exp(-dt/.9)); cz -= cv*dt;
-      if (cz < -L + 6){ fade = Math.max(0, fade - dt*1.5); if (fade <= 0){ cz = 2; cv = 0; rest = 0; camInit = false; } } else fade = Math.min(1, fade + dt*1.5);
+      // our car follows the real drive's timeline
+      const parked = tm < 21 || tm > 67.5;
+      if (!reduce) tm += dt*(parked ? 5 : 1.35);
+      let k = SEGT.findIndex(([a,b]) => tm >= a && tm < b); if (k < 0) k = 6;
+      const [a0,a1] = SEGT[k], s0 = segs[k];
+      let pr = (tm - a0)/(a1 - a0); if (k === 0) pr = clamp((tm - 19)/2, 0, 1); if (k === 6) pr = clamp((tm - 67.5)/1.6, 0, 1);
+      const nz = s0.z0 + (s0.z1 - s0.z0)*pr; cv = lerp(cv, Math.max(0, (cz - nz)/Math.max(dt,1e-3)), 1 - Math.exp(-dt/.4)); cz = nz;
+      seg = s0.nm;
+      if (tm > 86){ fade = Math.max(0, fade - dt*1.5); if (fade <= 0){ tm = 0; cz = 2; cv = 0; camInit = false; } } else fade = Math.min(1, fade + dt*1.5);
       car.position.z = cz; car.position.x = -1.15;
       // other traffic
       const lanes = {}; cars.forEach(c => (lanes[c.lane] = lanes[c.lane] || []).push(c));
@@ -771,9 +790,28 @@ const ROAD = (() => {
         for (let k=0;k<2;k++){ const x = c.lane + (k ? .38 : -.38); tmpP.set(x, FLOOR_Y + .38, c.z + (c.dir < 0 ? len/2 : -len/2)); tmpS.set(1,1,len); tmpM.compose(tmpP, tmpQ.identity(), tmpS); streak.setMatrixAt(i*2+k, tmpM); streak.setColorAt(i*2+k, col); } });
       streak.instanceMatrix.needsUpdate = true; streak.instanceColor.needsUpdate = true;
       // read-out
-      $("#rdSeg").textContent = seg; $("#rdSeg").style.color = seg === "City" ? "var(--warm)" : seg === "Highway" ? "var(--calm)" : "var(--soft)";
-      $("#rdRate").textContent = seg === "City" ? "The study's own stress rating here: 0.70–0.84" : seg === "Highway" ? "The study's own stress rating here: about 0.5" : "Parked rest, not part of the comparison";
-      return {grade: seg === "City" ? .4 : 0, fade};
+      const code = codeAt(tm), sc = scoreAtT(tm);
+      if (!isNaN(sc)) shown = lerp(shown, sc, 1 - Math.exp(-dt/.35));
+      const k2 = clamp((85 - shown)/60, 0, 1), cc = mixC(C.calm, C.warm, k2);
+      const label = code === "C" ? "City" : code === "H" ? "Highway" : code === "P" ? "Car park" : "Parked rest";
+      $("#rdSeg").textContent = label; $("#rdSeg").style.color = code === "C" ? "var(--warm)" : code === "H" ? "var(--calm)" : "var(--soft)";
+      $("#rdN").textContent = Math.round(shown); $("#rdN").style.color = css(mixC(C.white, C.warm, k2));
+      $("#rdRate").textContent = code === "C" ? "Busy city traffic: the study's own stress rating is high here" : code === "H" ? "Highway: calmer, and still driving" : tm < 30 ? "Parked rest before the drive" : "Parked rest after the drive";
+      glowM.material.color.copy(cc).multiplyScalar(.9); glowM.material.opacity = .1 + .12*k2;
+      bodyE.material.color.copy(mixC(new THREE.Color(.62,.7,.78), C.warm, k2));
+      { const cv2 = $("#rdSpark"), r = cv2.getBoundingClientRect(), dpr = Math.min(devicePixelRatio||1, 2);
+        if (cv2.width !== Math.round(r.width*dpr)){ cv2.width = Math.round(r.width*dpr); cv2.height = Math.round(r.height*dpr); }
+        const c = cv2.getContext("2d"), W = r.width, H = r.height; c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,W,H);
+        const X = m => m/86*W, Y = v => H - 4 - v/100*(H-8);
+        for (let i=0;i<DRIVE.length;i++){ const w = DRIVE[i], nx = i < DRIVE.length-1 ? DRIVE[i+1][0] : w[0]+.5;
+          c.fillStyle = w[2] === "C" ? "rgba(255,148,71,.16)" : w[2] === "H" ? "rgba(67,211,195,.12)" : "rgba(170,196,214,.05)"; c.fillRect(X(w[0]), 0, Math.max(1, X(Math.min(nx, w[0]+1.5)) - X(w[0])), H); }
+        c.strokeStyle = "rgba(238,243,246,.18)"; c.setLineDash([3,3]); c.beginPath(); c.moveTo(0, Y(100)); c.lineTo(W, Y(100)); c.stroke(); c.setLineDash([]);
+        c.lineWidth = 2; c.lineJoin = "round";
+        for (let i=1;i<DRIVE.length;i++){ const a = DRIVE[i-1], b = DRIVE[i]; if (a[0] > tm) break; if (b[0]-a[0] > 1.6) continue;
+          const bm = Math.min(b[0], tm), bv = a[1] + (b[1]-a[1])*(bm-a[0])/(b[0]-a[0]);
+          c.strokeStyle = css(mixC(C.calm, C.warm, clamp((85 - (a[1]+bv)/2)/60,0,1))); c.beginPath(); c.moveTo(X(a[0]), Y(a[1])); c.lineTo(X(bm), Y(bv)); c.stroke(); }
+        c.fillStyle = css(cc); c.beginPath(); c.arc(X(Math.min(tm,86)), Y(shown), 3.5, 0, 7); c.fill(); }
+      return {grade: k2*.55, fade};
     },
     cam(t, dt){
       const sp = clamp(cv/26, 0, 1);
