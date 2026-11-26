@@ -53,7 +53,7 @@ The answer:
 - **Everyday life is hard:** milder stress, rated a few times a day; calm ratings cluster in the evening.
 - **The normal uses all the data:** each person's normal comes from their whole recording. A real app would only have the past. (A past-only normal was tried and didn't help.)
 - **Stretches, not every spike:** it tells stressful stretches from calm ones but hardly follows the drivers' moment-to-moment rating (correlation about 0.1).
-- **One wristband:** all stress data is from the Empatica E4; other devices are untested.
+- **Self-training is a small gain:** about +2 on average, mostly from real driving (+8); in the lab it adds almost nothing.
 
 ### Slide 15: thank you
 > "Thank you. We're happy to take questions."

@@ -67,4 +67,4 @@ Every other run (rounds 1–17, checks, plain-formula baseline) is listed in `RE
 - Everyday stress is milder and rated a few times a day; calm ratings cluster in the evening.
 - Each person's normal uses their whole recording; a real app would only have the past.
 - It separates stressful stretches from calm ones but doesn't follow moment-to-moment stress.
-- All stress data comes from one wristband family (Empatica E4).
+- Self-training is a small, uneven gain: about +2 on average, +8 on driving, almost nothing in the lab.

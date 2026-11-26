@@ -106,7 +106,8 @@ Each person hands over with one line: Ananya → "Swayam will show how it learns
 - Lab timing: stress always comes at the same point in a lab session, so a clock alone scores high there. The driving test is the answer.
 - Everyday stress is milder and rated rarely; calm ratings cluster in the evening.
 - Each person's normal uses their whole recording; a real app would only have the past.
-- It tells stressful stretches apart, not every moment-to-moment spike. All data is from one wristband family (Empatica E4).
+- It tells stressful stretches apart, not every moment-to-moment spike.
+- Self-training is a small gain: about +2 on average, mostly from driving (+8).
 
 **Slide 15, thank you.**
 - "Thank you. We're happy to take questions."
