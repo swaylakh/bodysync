@@ -12,28 +12,26 @@ Team: Swayam Lakhotia, Ananya Khaitan, Bhavya Bajaj. Code: https://github.com/sw
 | Report source (LaTeX) | `report/BodySync_Final_Report.tex` + figures `fig7`–`fig10` in `figures/` (made by `src/report_figures.py`) |
 | Interactive 3D walkthrough | `docs/interactive/BodySync_3D.html` (open in a browser; needs internet for the 3D library) |
 | Presenter guide | `docs/presenter_guide.md`, with detailed notes per person in `docs/presenter_notes/` |
-| Full technical write-up | `README.md` |
+| Project overview and how to run | `README.md` (full log of every stage: `archive/README_full_history.md`) |
 
 To rebuild the report PDF: `pdflatex BodySync_Final_Report.tex` inside `report/` (or upload the .tex and figures `fig7`–`fig10` to Overleaf).
 
 ## Folder map
 
 ```
-README.md            full technical write-up: method, every result, how to run
+README.md            the project in one page: results, method, code, how to run, getting the data
 HANDOVER.md          this file
 docs/
-  slides/            final deck (+ archive/ with the earlier weekly decks)
+  slides/            final deck (.pptx + .pdf)
   interactive/       the 3D walkthrough page
   presenter_guide.md, presenter_notes/
   Paper_Summary.pdf, Related_Papers.md   background reading
-report/
-  BodySync_Final_Report.tex / .pdf       the final report
-  main.tex, overleaf.tex, tables/, refs.bib, make_tables.py   the earlier (mid-term) report
-  archive/           older progress report
+report/              the final report (.tex + .pdf)
 src/                 all code (data loaders in src/datasets/, final system in src/final_eval.py)
 results/             every result as CSV (iteration_log.csv = every idea tried, final_test.csv = locked test)
-figures/             figures used in the reports
+figures/             figures used in the report (fig6-fig10)
 data/                not included, see below
+archive/             earlier stages: first "sync" idea, mid-term report, weekly decks, full technical log
 ```
 
 ## Datasets (not included)

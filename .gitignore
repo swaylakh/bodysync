@@ -1,6 +1,6 @@
 # Datasets: large and under their own licences (see README)
 data/*
-!data/DATASET_SOURCE.md
+!data/README.md
 
 # Third-party paper (copyrighted); summarised in docs/Paper_Summary.pdf
 docs/2026_IJHCS_*.pdf

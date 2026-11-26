@@ -113,6 +113,16 @@ h1 em,h2 em{font-style:italic;color:var(--calm)}
 /* road */
 .seg{font:400 clamp(40px,5vw,72px)/1 var(--serif);font-style:italic;transition:color .6s;text-shadow:0 2px 24px rgba(0,0,0,.8)}
 .small{text-shadow:0 0 14px rgba(0,0,0,.95)}
+.wrhud{width:min(360px,calc(100vw - 44px));display:grid;gap:10px}
+.wr{padding:10px 14px 12px;border-radius:14px;background:rgba(4,7,11,.62);backdrop-filter:blur(8px);border:1px solid var(--line)}
+.wrh{display:flex;align-items:baseline;gap:8px}
+.wrh span{flex:1;font:500 12px var(--sans);color:var(--soft)}
+.wrh b{font:400 22px var(--mono);font-variant-numeric:tabular-nums}
+.wrh small{font:400 11px var(--mono);color:var(--dim)}
+.wrh small i{font-style:normal}
+.wr canvas{display:block;width:100%;height:40px;margin:6px 0 4px}
+.wr p{margin:0;font-size:11.5px;color:var(--dim);line-height:1.4}
+@media (max-width:900px){.wrhud{top:auto!important;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:none!important}.wr p{display:none}}
 .drvhud{width:min(400px,calc(100vw - 44px));padding:14px 16px;border-radius:16px;background:rgba(4,7,11,.62);backdrop-filter:blur(8px);border:1px solid var(--line)}
 .drvhud .seg{font-size:clamp(34px,3.6vw,52px)}
 .rdn{font:400 clamp(40px,4vw,56px)/1 var(--mono);letter-spacing:-.04em;font-variant-numeric:tabular-nums;transition:color .4s}
@@ -154,7 +164,7 @@ h1 em,h2 em{font-style:italic;color:var(--calm)}
 
 <header class="top">
   <div class="brand"><i></i>BodySync</div>
-  <div class="topr"><button type="button" class="motion" id="motion">Animations on</button><div class="count" id="count">01 / 05</div></div>
+  <div class="topr"><button type="button" class="motion" id="motion">Animations on</button><div class="count" id="count">01 / 06</div></div>
 </header>
 
 <!-- chapter 1: the body -->
@@ -167,6 +177,20 @@ h1 em,h2 em{font-style:italic;color:var(--calm)}
 </section>
 <div id="orbRead"><div class="n" id="oN">96</div><div class="st" id="oSt">At your normal</div>
   <div class="rd"><span>HR <b id="oHr">70</b></span><span>Sweat <b id="oEda">2.00</b></span><span>Temp <b id="oT">33.0</b></span></div></div>
+
+<!-- chapter 2: the wristband -->
+<section class="ch" id="chW">
+  <div class="blk" style="left:max(22px,6vw);top:calc(70px + env(safe-area-inset-top,0px));--d:0">
+    <p class="eyebrow"><b>●</b> The sensors, simulated live</p>
+    <h2>What the wrist <em>actually measures.</em></h2>
+    <p class="lede">The band is lifted off the skin here so you can see underneath. Hold the button and watch each sensor react.</p>
+  </div>
+  <div class="blk wrhud" style="right:max(22px,6vw);top:50%;transform:translateY(-50%);--d:1">
+    <div class="wr"><div class="wrh"><span>Heart rate</span><b id="wHr">70</b><small>bpm</small></div><canvas id="wcHr"></canvas><p>Green light shines into the skin; each heartbeat changes how much comes back.</p></div>
+    <div class="wr"><div class="wrh"><span>Sweat (EDA)</span><b id="wEda">2.00</b><small>µS · <i id="wB">2</i>/min</small></div><canvas id="wcEda"></canvas><p>A tiny current flows between two contacts. Sweat bursts make the skin conduct better.</p></div>
+    <div class="wr"><div class="wrh"><span>Skin temperature</span><b id="wT">33.0</b><small>°C</small></div><canvas id="wcT"></canvas><p>Under stress blood moves toward the core, so the wrist cools slightly.</p></div>
+  </div>
+</section>
 
 <!-- chapter 2: training -->
 <section class="ch" id="ch1">
@@ -249,10 +273,11 @@ h1 em,h2 em{font-style:italic;color:var(--calm)}
 <nav class="nav">
   <div class="chs" id="chs">
     <button type="button" aria-current="true"><span>01</span><b>The body</b><i></i></button>
-    <button type="button"><span>02</span><b>How it learns</b><i></i></button>
-    <button type="button"><span>03</span><b>One person</b><i></i></button>
-    <button type="button"><span>04</span><b>Real roads</b><i></i></button>
-    <button type="button"><span>05</span><b>The climb</b><i></i></button>
+    <button type="button"><span>02</span><b>The wristband</b><i></i></button>
+    <button type="button"><span>03</span><b>How it learns</b><i></i></button>
+    <button type="button"><span>04</span><b>One person</b><i></i></button>
+    <button type="button"><span>05</span><b>Real roads</b><i></i></button>
+    <button type="button"><span>06</span><b>The climb</b><i></i></button>
   </div>
   <div class="arrows">
     <button type="button" id="prev" aria-label="Previous"><svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg></button>
@@ -351,7 +376,7 @@ function placeLabels(){
 }
 
 /* ================= world ================= */
-const ST = [0,1,2,3,4].map(i => { const g = new THREE.Group(); g.position.set(i*44, 0, 0); scene.add(g); return g; });
+const ST = [[0,0,0],[22,0,-34],[44,0,0],[88,0,0],[132,0,0],[176,0,0]].map(p => { const g = new THREE.Group(); g.position.set(p[0], p[1], p[2]); scene.add(g); return g; });
 const FLOOR_Y = -3.2;
 // grid floor
 { const geo = new THREE.PlaneGeometry(700, 700); geo.rotateX(-Math.PI/2);
@@ -483,10 +508,112 @@ const ORB = (() => {
   };
 })();
 
+
+/* ================= 2 · the wristband (illustration, simulated readings) ================= */
+const WRIST = (() => {
+  const g = ST[1];
+  const skinTop = 0, skinH = 1.9, W = 9, D = 4.4;
+  // skin: translucent layers seen in cut-away
+  const skin = new THREE.Mesh(new THREE.BoxGeometry(W, skinH, D), new THREE.MeshBasicMaterial({color:0x6a3e3a, transparent:true, opacity:.08, depthWrite:false}));
+  skin.position.y = skinTop - skinH/2; g.add(skin);
+  const skinE = lineBox(W, skinH, D, 0xd9a593, .22); skinE.position.copy(skin.position); g.add(skinE);
+  const epi = new THREE.Mesh(new THREE.BoxGeometry(W, .18, D), new THREE.MeshBasicMaterial({color:0xb8857a, transparent:true, opacity:.12, depthWrite:false})); epi.position.y = skinTop - .09; g.add(epi);
+  // blood vessel along the arm
+  const vessel = new THREE.Mesh(new THREE.CylinderGeometry(.24, .24, W*.98, 28, 1, true), new THREE.MeshBasicMaterial({color:0xd6606e, transparent:true, opacity:.85}));
+  vessel.rotation.z = Math.PI/2; vessel.position.set(0, -1.15, .3); g.add(vessel);
+  const cells = makePoints(160, .55); g.add(cells.p); const CELL = [];
+  for (let i=0;i<cells.n;i++){ CELL.push({u:Math.random(), r:Math.random()*.18, a:Math.random()*6.28}); cells.col.set([.9,.3,.36], i*3); cells.al[i] = .9; cells.sz[i] = .7 + Math.random()*.5; }
+  // sweat glands: coiled base deep in the skin, duct up to the surface
+  const glands = [];
+  for (let i=0;i<7;i++){ const x = -3.3 + i*1.1, z = -1.25;
+    const duct = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, 1.45, 8), new THREE.MeshBasicMaterial({color:0x9fb4c6, transparent:true, opacity:.35})); duct.position.set(x, -.8, z); g.add(duct);
+    const coil = new THREE.Mesh(new THREE.TorusGeometry(.14, .045, 8, 20), new THREE.MeshBasicMaterial({color:0x9fb4c6, transparent:true, opacity:.4})); coil.position.set(x, -1.55, z); g.add(coil);
+    const fill = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 1, 8), new THREE.MeshBasicMaterial({color:0x43d3c3})); fill.material.color.multiplyScalar(1.5); fill.position.set(x, -1.52, z); fill.scale.y = .001; g.add(fill);
+    const drop = new THREE.Mesh(new THREE.SphereGeometry(.13, 14, 10), new THREE.MeshBasicMaterial({color:0x43d3c3, transparent:true, opacity:0})); drop.position.set(x, .05, z); g.add(drop);
+    glands.push({fill, drop, f:0, on:0, d:0}); }
+  // the wristband module, lifted so the underside shows
+  const LIFT = 1.55;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.8, .5, 2.0), new THREE.MeshBasicMaterial({color:0x0b1118})); body.position.y = LIFT + .25; g.add(body);
+  const bodyE = lineBox(2.82, .52, 2.02, 0xb8c7d6, .6); bodyE.position.copy(body.position); g.add(bodyE);
+  for (const s of [-1,1]){ const strap = new THREE.Mesh(new THREE.BoxGeometry(2.6, .14, 1.6), new THREE.MeshBasicMaterial({color:0x111a24})); strap.position.set(s*2.7, LIFT + .1, 0); g.add(strap);
+    const se = lineBox(2.6, .14, 1.6, 0x51657a, .5); se.position.copy(strap.position); g.add(se); }
+  // green LEDs and light sensor (heart rate)
+  const leds = [-.22,.22].map(x => { const m = new THREE.Mesh(new THREE.SphereGeometry(.07, 14, 10), new THREE.MeshBasicMaterial({color:0x6ee78c})); m.position.set(x, LIFT - .02, .25); g.add(m); return m; });
+  const pd = new THREE.Mesh(new THREE.BoxGeometry(.26,.06,.2), new THREE.MeshBasicMaterial({color:0x26323f})); pd.position.set(.62, LIFT - .02, .25); g.add(pd);
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(.95, LIFT + 1.1, 32, 1, true), new THREE.MeshBasicMaterial({color:0x6ee78c, transparent:true, opacity:.12, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide}));
+  cone.position.set(0, (LIFT - 1.15)/2 + .02, .25); g.add(cone);
+  const phot = makePoints(120, .5); g.add(phot.p); const PH = []; for (let i=0;i<phot.n;i++) PH.push({t:1}); let phHead = 0;
+  // sweat contacts (EDA) and the current between them
+  const elec = [-1.05, 1.05].map(x => { const m = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .05, 24), new THREE.MeshBasicMaterial({color:0xd9e2ea})); m.position.set(x, LIFT - .02, -.55); g.add(m); return m; });
+  const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(-1.05, LIFT - .04, -.55), new THREE.Vector3(0, -2.0, -.9), new THREE.Vector3(1.05, LIFT - .04, -.55));
+  const cur3 = makePoints(40, .6); g.add(cur3.p); for (let i=0;i<cur3.n;i++){ cur3.col.set([2.0,1.6,.6], i*3); cur3.al[i] = .9; }
+  let curPh = 0;
+  // skin thermometer and rising heat
+  const tsen = new THREE.Mesh(new THREE.CylinderGeometry(.13, .13, .05, 20), new THREE.MeshBasicMaterial({color:0xf2c14e})); tsen.position.set(-.7, LIFT - .02, .5); g.add(tsen);
+  const heat = makePoints(120, .5); g.add(heat.p); const HT = []; for (let i=0;i<heat.n;i++) HT.push({t:Math.random(), x:-.7 + (Math.random()-.5)*1.4, z:.5 + (Math.random()-.5)*1.0});
+  // labels
+  label("green light · heart rate", "calm", new THREE.Vector3(0, LIFT + .9, .25), 1, {group:g});
+  label("sweat contacts · EDA", "gold", new THREE.Vector3(-1.05, LIFT - .55, -1.4), 1, {group:g});
+  label("skin thermometer", "warm", new THREE.Vector3(-1.9, LIFT - .45, .9), 1, {group:g});
+  label("blood vessel", "", new THREE.Vector3(3.6, -1.6, .6), 1, {group:g});
+  label("sweat glands", "", new THREE.Vector3(-3.9, -.3, -1.25), 1, {group:g});
+  // traces for the HUD
+  const NB = 220, hrB = new Float32Array(NB), edaB = new Float32Array(NB), tB = new Float32Array(NB); let bh = 0, acc = 0, pulse = 9, prevBeat = 0, lastB = 0;
+  const ppg = new Float32Array(NB);
+  function spark(cv, arr, lo, hi, col, marks){
+    const r = cv.getBoundingClientRect(), dpr = Math.min(devicePixelRatio||1, 2);
+    if (cv.width !== Math.round(r.width*dpr)){ cv.width = Math.round(r.width*dpr); cv.height = Math.round(r.height*dpr); }
+    const c = cv.getContext("2d"), Wd = r.width, Hd = r.height; c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,Wd,Hd);
+    c.strokeStyle = col; c.lineWidth = 1.7; c.lineJoin = "round"; c.beginPath();
+    for (let i=0;i<NB;i++){ const v = arr[(bh+i)%NB], x = i/(NB-1)*Wd, y = Hd-3 - clamp((v-lo)/(hi-lo),0,1)*(Hd-6); i ? c.lineTo(x,y) : c.moveTo(x,y); } c.stroke();
+    if (marks){ c.fillStyle = "rgba(255,148,71,.95)"; for (const b of sim.bursts){ const x = Wd - (sim.time-b)/11*Wd; if (x > 0) c.fillRect(x-1, Hd-6, 2, 6); } }
+  }
+  return {
+    group:g, dur: 30,
+    enter(){},
+    update(dt, t){
+      const beat = reduce ? 0 : sim.beat, sT = sim.sT;
+      if (sim.beat > prevBeat + .4) pulse = 0; prevBeat = sim.beat; pulse += dt;
+      // vessel pulse and flowing cells
+      const sc = 1 + .32*beat; vessel.scale.set(sc, 1, sc); vessel.material.color.setRGB(.5 + .35*beat, .17, .21);
+      for (let i=0;i<cells.n;i++){ const c = CELL[i]; if (!reduce) c.u = (c.u + dt*(.05 + .12*beat + sim.hr/1400)) % 1;
+        cells.pos.set([-W*.48 + c.u*W*.96, -1.15 + Math.cos(c.a)*c.r*sc, .3 + Math.sin(c.a)*c.r*sc], i*3); } cells.dirty();
+      // light into the skin and back
+      leds.forEach(m => m.material.color.setRGB(.43*(1.4 + 1.6*beat), .9*(1.4 + 1.6*beat), .55*(1.4 + 1.6*beat)));
+      cone.material.opacity = .05 + .12*beat;
+      if (!reduce && Math.random() < dt*(14 + 50*beat)){ const i = phHead; phHead = (phHead+1)%phot.n; PH[i] = {t:0, x:(Math.random()-.5)*1.2, z:.25 + (Math.random()-.5)*.6}; }
+      for (let i=0;i<phot.n;i++){ const p = PH[i]; if (p.t >= 1){ phot.al[i] = 0; continue; } p.t += dt*.9;
+        const y = -.95 + p.t*(LIFT + .9); phot.pos.set([lerp(p.x, .62, p.t), y, lerp(p.z, .25, p.t)], i*3); phot.col.set([.6,1.9,.9], i*3); phot.al[i] = Math.sin(p.t*Math.PI); } phot.dirty();
+      // sweat bursts fill a gland and pop a droplet at the surface
+      const lb = sim.bursts.length ? sim.bursts[sim.bursts.length-1] : 0;
+      if (lb > lastB){ lastB = lb; if (!reduce){ const gl = glands[(Math.random()*glands.length)|0]; gl.on = 1; } }
+      glands.forEach(gl => { if (gl.on){ gl.f = Math.min(1, gl.f + dt*2.2); if (gl.f >= 1){ gl.on = 0; gl.d = 1; } } else gl.f = Math.max(0, gl.f - dt*.6);
+        gl.fill.scale.y = Math.max(.001, gl.f*1.5); gl.fill.position.y = -1.55 + gl.f*.75; gl.d = Math.max(0, gl.d - dt*.8);
+        gl.drop.material.opacity = gl.d*.9; gl.drop.scale.setScalar(.4 + (1-gl.d)*1.2); gl.drop.position.y = .05 + (1-gl.d)*.25; });
+      // current between the contacts runs faster as the skin conducts better
+      if (!reduce) curPh += dt*(.15 + .35*clamp(sim.eda - 1.6, 0, 3));
+      for (let i=0;i<cur3.n;i++){ const p = curve.getPoint(((i/cur3.n) + curPh) % 1); cur3.pos.set([p.x, p.y, p.z], i*3); cur3.al[i] = .55 + .4*clamp(sim.eda-1.7,0,1.5); } cur3.dirty();
+      elec.forEach(m => m.material.color.setRGB(.85 + .5*clamp(sim.eda-1.8,0,1), .89, .92));
+      // warmth rising from the skin fades as the wrist cools
+      for (let i=0;i<heat.n;i++){ const h = HT[i]; if (!reduce) h.t += dt*.35; if (h.t > 1){ h.t = 0; h.x = -.7 + (Math.random()-.5)*1.4; h.z = .5 + (Math.random()-.5)*1.0; }
+        heat.pos.set([h.x, .05 + h.t*(LIFT - .2), h.z], i*3); const w = 1 - sT*.85; heat.col.set([2.0*w + .4*(1-w), 1.0*w + .7*(1-w), .45*w + 1.3*(1-w)], i*3); heat.al[i] = Math.sin(h.t*Math.PI)*(.25 + .5*w); } heat.dirty();
+      tsen.material.color.copy(mixC(C.gold, new THREE.Color(.55,.75,1), sT)).multiplyScalar(1.6);
+      // HUD traces (sped-up: the last ~11 seconds)
+      if (!reduce){ acc += dt; while (acc >= .05){ acc -= .05; const tau = pulse; ppg[bh] = Math.exp(-Math.pow((tau-.1)/.05,2)) + .38*Math.exp(-Math.pow((tau-.32)/.07,2)); hrB[bh] = sim.hr; edaB[bh] = sim.eda; tB[bh] = sim.t; bh = (bh+1)%NB; } }
+      spark($("#wcHr"), ppg, -.1, 1.15, "rgb(110,231,140)");
+      spark($("#wcEda"), edaB, 1.8, 3.6, "rgb(67,211,195)", true);
+      spark($("#wcT"), tB, 32.1, 33.2, css(mixC(C.gold, new THREE.Color(.55,.75,1), sT)));
+      $("#wHr").textContent = Math.round(sim.hr); $("#wEda").textContent = sim.eda.toFixed(2); $("#wB").textContent = sim.bursts.length; $("#wT").textContent = sim.t.toFixed(1);
+      return {grade: clamp((95-sim.score)/50,0,1)*.4};
+    },
+    cam(t){ const a = -.3 + Math.sin(t*.12)*.4, d = 13.5; return {pos:new THREE.Vector3(Math.sin(a)*d, 2.4 + Math.sin(t*.09)*.3, Math.cos(a)*d), look:new THREE.Vector3(0, 1.4, 0), off: innerWidth > 900 ? .1 : 0}; }
+  };
+})();
+
 /* ================= 2 · how it learns ================= */
 const STUDIES = [["WESAD",15],["AffectiveROAD",9],["Stress-Predict",35],["Stress + exercise",36],["CAN-STRESS",62]];
 const TRAIN = (() => {
-  const g = ST[1], BEAT = 5.6, R = rng(7);
+  const g = ST[2], BEAT = 5.6, R = rng(7);
   const people = [];
   let bi = 0, hi = 0;
   STUDIES.forEach(([name,n], si) => { for (let k=0;k<n;k++){ const hid = Math.floor((k+1)*.4) > Math.floor(k*.4); people.push({si, k, hid, bi: hid?-1:bi++, hi: hid?hi++:-1, cur:new THREE.Vector3(), lit:0, sent:false, scored:0}); } });
@@ -536,13 +663,13 @@ const TRAIN = (() => {
   const dayG = new THREE.Group(); dayG.position.copy(YOU); dayG.add(bars); g.add(dayG); bars.visible = false;
   const scan = new THREE.Mesh(new THREE.BoxGeometry(.02, 1.6, .02), new THREE.MeshBasicMaterial({color:0xf2c14e})); dayG.add(scan); scan.visible = false;
   // labels
-  STUDIES.forEach(([name,n], i) => label(`${name}<br><b>${n}</b>`, "", clusterC[i].clone().add(new THREE.Vector3(0, -.36*Math.cbrt(n)-.55, 0)), 1, {group:g, when:()=>beat===0}));
-  label("60% · the model learns from them", "calm", buildC.clone().add(new THREE.Vector3(0, 2.25, 0)), 1, {group:g, when:()=>beat>=1 && beat!==3});
-  label("40% · locked away until the end", "", vaultC.clone().add(new THREE.Vector3(0, vs/2+.95, 0)), 1, {group:g, when:()=>beat===1 || beat===2});
-  label("model · many small decision trees", "", MODEL.clone().add(new THREE.Vector3(0, 1.45, 0)), 1, {group:g, when:()=>beat>=2});
-  label("you", "gold", YOU.clone().add(new THREE.Vector3(0, -.35, 0)), 1, {group:g, when:()=>beat===3});
-  label("most stressed 10%", "warm", YOU.clone().add(new THREE.Vector3(-1.9, .9, 0)), 1, {group:g, when:()=>beat===3 && bt>2.2});
-  label("calmest 10%", "calm", YOU.clone().add(new THREE.Vector3(1.9, .9, 0)), 1, {group:g, when:()=>beat===3 && bt>2.2});
+  STUDIES.forEach(([name,n], i) => label(`${name}<br><b>${n}</b>`, "", clusterC[i].clone().add(new THREE.Vector3(0, -.36*Math.cbrt(n)-.55, 0)), 2, {group:g, when:()=>beat===0}));
+  label("60% · the model learns from them", "calm", buildC.clone().add(new THREE.Vector3(0, 2.25, 0)), 2, {group:g, when:()=>beat>=1 && beat!==3});
+  label("40% · locked away until the end", "", vaultC.clone().add(new THREE.Vector3(0, vs/2+.95, 0)), 2, {group:g, when:()=>beat===1 || beat===2});
+  label("model · many small decision trees", "", MODEL.clone().add(new THREE.Vector3(0, 1.45, 0)), 2, {group:g, when:()=>beat>=2});
+  label("you", "gold", YOU.clone().add(new THREE.Vector3(0, -.35, 0)), 2, {group:g, when:()=>beat===3});
+  label("most stressed 10%", "warm", YOU.clone().add(new THREE.Vector3(-1.9, .9, 0)), 2, {group:g, when:()=>beat===3 && bt>2.2});
+  label("calmest 10%", "calm", YOU.clone().add(new THREE.Vector3(1.9, .9, 0)), 2, {group:g, when:()=>beat===3 && bt>2.2});
   const CAPS = [
     ["157 people. Five public studies.", "Everyone wore the same Empatica wristband: in the lab, in daily life and on real roads."],
     ["Split first.", "Before anything was built, 40% of the people in every study were locked away. Nothing was ever tuned on them."],
@@ -635,7 +762,7 @@ const scoreAt = m => { if (m<=PTS[0][0]) return PTS[0][1]; for (let i=1;i<PTS.le
 const inGap = m => { for (let i=1;i<PTS.length;i++){ if (m>PTS[i-1][0] && m<PTS[i][0]) return PTS[i][0]-PTS[i-1][0] > 1.01; } return false; };
 const phaseAt = m => m<9.5 ? "Calm start" : m<12 ? "Before the test" : m<=17 ? "Colour-word test" : m<22 ? "Rest" : m<=32 ? "Interview" : (m>=38&&m<=40) ? "Fast breathing" : "Rest and recovery";
 const RIB = (() => {
-  const g = ST[2], X = m => -16 + (m/54)*32, Y = s => -1.6 + s/100*3.7;
+  const g = ST[3], X = m => -16 + (m/54)*32, Y = s => -1.6 + s/100*3.7;
   const ms = []; for (let m=1; m<=54.001; m+=.2) ms.push(m);
   const n = ms.length, pos = new Float32Array(n*2*3), col = new Float32Array(n*2*3), idx = [];
   const wpos = new Float32Array(n*2*3), wcol = new Float32Array(n*2*3), wal = new Float32Array(n*2);
@@ -658,14 +785,14 @@ const RIB = (() => {
     const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, 2.4), new THREE.MeshBasicMaterial({color: st ? 0xff9447 : 0x8592a0, transparent:true, opacity: st ? .045 : .03, depthWrite:false}));
     box.position.set((X(a)+X(b))/2, FLOOR_Y + h/2, 0); g.add(box);
     const ed = lineBox(w, h, 2.4, st ? 0xff9447 : 0x8592a0, st ? .28 : .14); ed.position.copy(box.position); g.add(ed); });
-  label("Colour-word test", "warm", new THREE.Vector3(X(14.5), FLOOR_Y + 6.6, 0), 2, {group:g});
-  label("Interview", "warm", new THREE.Vector3(X(27), FLOOR_Y + 6.6, 0), 2, {group:g});
-  label("your normal", "", new THREE.Vector3(X(2.5), Y(100) + .35, 0), 2, {group:g}).a = .75;
+  label("Colour-word test", "warm", new THREE.Vector3(X(14.5), FLOOR_Y + 6.6, 0), 3, {group:g});
+  label("Interview", "warm", new THREE.Vector3(X(27), FLOOR_Y + 6.6, 0), 3, {group:g});
+  label("your normal", "", new THREE.Vector3(X(2.5), Y(100) + .35, 0), 3, {group:g}).a = .75;
   // the rider
   const rider = new THREE.Mesh(new THREE.SphereGeometry(.12, 20, 14), new THREE.MeshBasicMaterial({color:0xffffff})); g.add(rider);
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, 1, 8), new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:.5})); g.add(beam);
   const halo = new THREE.Mesh(new THREE.RingGeometry(.2, .23, 48), new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:.6, side:THREE.DoubleSide})); g.add(halo);
-  const scoreL = label("", "big", new THREE.Vector3(), 2, {group:rider});
+  const scoreL = label("", "big", new THREE.Vector3(), 3, {group:rider});
   let mNow = 0, hold = 0, overview = 0;
   const camP = new THREE.Vector3(), camL = new THREE.Vector3(); let camInit = false;
   return {
@@ -694,7 +821,7 @@ const RIB = (() => {
 
 /* ================= 4 · real roads (illustration; results are real) ================= */
 const ROAD = (() => {
-  const g = ST[3];
+  const g = ST[4];
   const SEGS = [["Parked",18],["City",56],["Highway",72],["City",56],["Highway",72],["City",56],["Parked",18]];
   let z = 0; const segs = SEGS.map(([nm,len]) => { const s = {nm, z0:-z, z1:-(z+len)}; z += len; return s; }); const L = z;
   const segAt = zz => { for (const s of segs) if (zz <= s.z0 && zz > s.z1) return s.nm; return "Parked"; };
@@ -720,7 +847,7 @@ const ROAD = (() => {
     else if (s.nm === "Highway"){ for (let zz = s.z0; zz > s.z1; zz -= 3) for (const side of [-1,1]) refl.push([side*4.7, FLOOR_Y + .12, zz]);
       for (let zz = s.z0 - 8; zz > s.z1; zz -= 22) for (const side of [-1,1]) lamps.push([side*6.2, FLOOR_Y + 5.5, zz, 1]); }
     else { for (let zz = s.z0 - 2; zz > s.z1 + 2; zz -= 2.6) refl.push([5.6, FLOOR_Y + .2, zz]); } });
-  const bm = new THREE.InstancedMesh(bGeo, bMat, bList.length); bList.forEach((b,i) => { tmpP.set(b[0],b[1],b[2]); tmpS.set(b[3],b[4],b[5]); tmpM.compose(tmpP, tmpQ.identity(), tmpS); bm.setMatrixAt(i, tmpM); }); g.add(bm);
+  const bm = new THREE.InstancedMesh(bGeo, bMat, bList.length); bm.frustumCulled = false; bList.forEach((b,i) => { tmpP.set(b[0],b[1],b[2]); tmpS.set(b[3],b[4],b[5]); tmpM.compose(tmpP, tmpQ.identity(), tmpS); bm.setMatrixAt(i, tmpM); }); g.add(bm);
   { const eg = new THREE.EdgesGeometry(bGeo), ep = eg.attributes.position.array, all = new Float32Array(bList.length*ep.length);
     bList.forEach((b,i) => { for (let k=0;k<ep.length;k+=3){ all[i*ep.length+k] = b[0] + ep[k]*(b[3]+.02); all[i*ep.length+k+1] = b[1] + ep[k+1]*(b[4]+.02); all[i*ep.length+k+2] = b[2] + ep[k+2]*(b[5]+.02); } });
     const mg = new THREE.BufferGeometry(); mg.setAttribute("position", new THREE.BufferAttribute(all,3));
@@ -732,13 +859,13 @@ const ROAD = (() => {
   const tl = []; segs.forEach(s => { if (s.nm === "City") for (let zz = s.z0 - 12; zz > s.z1 + 6; zz -= 19) tl.push({z:zz, off:Math.random()*7}); });
   const tlp = makePoints(tl.length*2, 1.4); g.add(tlp.p);
   const zebra = new THREE.InstancedMesh(new THREE.BoxGeometry(.42,.02,1.4), new THREE.MeshBasicMaterial({color:0x151c24}), tl.length*7);
-  tl.forEach((t,i) => { for (let k=0;k<7;k++){ tmpP.set(-4.1 + k*1.35, FLOOR_Y + .02, t.z + 1.4); tmpM.compose(tmpP, tmpQ.identity(), tmpS.set(1,1,1)); zebra.setMatrixAt(i*7+k, tmpM); } }); g.add(zebra);
+  tl.forEach((t,i) => { for (let k=0;k<7;k++){ tmpP.set(-4.1 + k*1.35, FLOOR_Y + .02, t.z + 1.4); tmpM.compose(tmpP, tmpQ.identity(), tmpS.set(1,1,1)); zebra.setMatrixAt(i*7+k, tmpM); } }); zebra.frustumCulled = false; g.add(zebra);
   const isRed = (t, T) => ((T + t.off) % 7) > 4.2;
   // cars as light streaks
   const NC = 64, cars = []; const R3 = rng(8);
   for (let i=0;i<NC;i++){ const lane = [-3.4,-1.15,1.15,3.4][i%4]; cars.push({lane, z: -R3()*L, v: 10, dir: lane < 0 ? -1 : 1}); }
   const streak = new THREE.InstancedMesh(new THREE.BoxGeometry(.09,.07,1), new THREE.MeshBasicMaterial({color:0xffffff}), NC*2);
-  for (let i=0;i<NC*2;i++) streak.setColorAt(i, C.white); streak.instanceMatrix.setUsage(THREE.DynamicDrawUsage); g.add(streak);
+  for (let i=0;i<NC*2;i++) streak.setColorAt(i, C.white); streak.instanceMatrix.setUsage(THREE.DynamicDrawUsage); streak.frustumCulled = false; g.add(streak);
   // our car
   const car = new THREE.Group(); g.add(car);
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.15,.42,2.1), new THREE.MeshBasicMaterial({color:0x0b1118})); body.position.y = FLOOR_Y + .36; car.add(body);
@@ -754,7 +881,7 @@ const ROAD = (() => {
   const DRIVE = [[3.0,64,"R"],[3.5,68,"R"],[4.0,73,"R"],[4.5,76,"R"],[5.0,80,"R"],[5.5,83,"R"],[6.0,83,"R"],[6.5,82,"R"],[7.0,82,"R"],[7.5,83,"R"],[8.0,83,"R"],[8.5,84,"R"],[9.0,84,"R"],[9.5,83,"R"],[10.0,79,"R"],[10.5,72,"R"],[11.0,68,"R"],[11.5,63,"R"],[12.0,62,"R"],[12.5,64,"R"],[13.0,65,"R"],[13.5,65,"R"],[14.0,64,"R"],[14.5,66,"R"],[15.0,66,"R"],[15.5,68,"R"],[16.0,70,"R"],[19.0,35,"P"],[19.5,38,"P"],[20.0,40,"P"],[22.0,61,"C"],[22.5,51,"C"],[23.0,47,"C"],[23.5,44,"C"],[24.0,37,"C"],[24.5,36,"C"],[29.5,92,"H"],[30.0,85,"H"],[30.5,78,"H"],[31.0,77,"H"],[31.5,78,"H"],[32.0,83,"H"],[36.5,51,"C"],[37.0,57,"C"],[37.5,50,"C"],[38.0,40,"C"],[38.5,32,"C"],[39.0,21,"C"],[39.5,16,"C"],[40.0,20,"C"],[40.5,23,"C"],[41.0,23,"C"],[41.5,22,"C"],[42.0,20,"C"],[42.5,20,"C"],[43.0,26,"C"],[43.5,33,"C"],[44.0,41,"C"],[44.5,42,"C"],[45.0,42,"C"],[48.5,27,"C"],[49.0,37,"C"],[49.5,37,"C"],[50.0,41,"C"],[50.5,50,"C"],[51.0,52,"C"],[51.5,61,"C"],[52.0,70,"C"],[52.5,73,"C"],[53.0,75,"C"],[53.5,70,"C"],[54.0,63,"C"],[54.5,56,"C"],[57.0,82,"H"],[57.5,83,"H"],[58.0,84,"H"],[58.5,86,"H"],[59.0,89,"H"],[59.5,91,"H"],[60.0,91,"H"],[64.5,15,"C"],[65.0,14,"C"],[65.5,13,"C"],[66.0,14,"C"],[66.5,17,"C"],[68.5,35,"P"],[69.0,37,"P"],[69.5,39,"P"],[72.0,48,"R"],[72.5,51,"R"],[73.0,51,"R"],[73.5,51,"R"],[74.0,55,"R"],[74.5,56,"R"],[75.0,57,"R"],[75.5,59,"R"],[76.0,59,"R"],[76.5,56,"R"],[77.0,57,"R"],[77.5,56,"R"],[78.0,48,"R"],[78.5,48,"R"],[79.0,45,"R"],[79.5,41,"R"],[80.0,42,"R"],[80.5,38,"R"],[81.0,33,"R"],[81.5,33,"R"],[82.0,35,"R"],[82.5,37,"R"],[83.0,45,"R"],[83.5,52,"R"],[84.0,58,"R"],[84.5,64,"R"],[85.0,62,"R"]];
   // road segment k covers these drive minutes (borders halfway between the labelled stretches)
   const SEGT = [[0,21],[21,27],[27,34.25],[34.25,55.75],[55.75,62.25],[62.25,67.5],[67.5,86]];
-  const scoreAtT = m => { if (m <= DRIVE[0][0]) return DRIVE[0][1]; for (let i=1;i<DRIVE.length;i++){ if (m <= DRIVE[i][0]){ const a = DRIVE[i-1], b = DRIVE[i]; return b[0]-a[0] > 1.6 ? NaN : a[1] + (b[1]-a[1])*(m-a[0])/(b[0]-a[0]); } } return DRIVE[DRIVE.length-1][1]; };
+  const scoreAtT = m => { if (m <= DRIVE[0][0]) return DRIVE[0][1]; for (let i=1;i<DRIVE.length;i++){ if (m <= DRIVE[i][0]){ const a = DRIVE[i-1], b = DRIVE[i]; return a[1] + (b[1]-a[1])*(m-a[0])/(b[0]-a[0]); } } return DRIVE[DRIVE.length-1][1]; };
   const codeAt = m => { let c = DRIVE[0][2]; for (const w of DRIVE){ if (w[0] > m) break; c = w[2]; } return c; };
   let cz = 0, cv = 0, seg = "Parked", fade = 1, T = 0, tm = 0, shown = 73;
   const camP = new THREE.Vector3(), camL = new THREE.Vector3(); let camInit = false;
@@ -806,10 +933,18 @@ const ROAD = (() => {
         for (let i=0;i<DRIVE.length;i++){ const w = DRIVE[i], nx = i < DRIVE.length-1 ? DRIVE[i+1][0] : w[0]+.5;
           c.fillStyle = w[2] === "C" ? "rgba(255,148,71,.16)" : w[2] === "H" ? "rgba(67,211,195,.12)" : "rgba(170,196,214,.05)"; c.fillRect(X(w[0]), 0, Math.max(1, X(Math.min(nx, w[0]+1.5)) - X(w[0])), H); }
         c.strokeStyle = "rgba(238,243,246,.18)"; c.setLineDash([3,3]); c.beginPath(); c.moveTo(0, Y(100)); c.lineTo(W, Y(100)); c.stroke(); c.setLineDash([]);
-        c.lineWidth = 2; c.lineJoin = "round";
-        for (let i=1;i<DRIVE.length;i++){ const a = DRIVE[i-1], b = DRIVE[i]; if (a[0] > tm) break; if (b[0]-a[0] > 1.6) continue;
-          const bm = Math.min(b[0], tm), bv = a[1] + (b[1]-a[1])*(bm-a[0])/(b[0]-a[0]);
-          c.strokeStyle = css(mixC(C.calm, C.warm, clamp((85 - (a[1]+bv)/2)/60,0,1))); c.beginPath(); c.moveTo(X(a[0]), Y(a[1])); c.lineTo(X(bm), Y(bv)); c.stroke(); }
+        c.lineJoin = "round"; c.lineCap = "round";
+        // smooth curve through the real windows; short gaps between labelled stretches are bridged in a fainter line
+        const pts = DRIVE.filter(w => w[0] <= tm).map(w => [X(w[0]), Y(w[1]), w[1], w[0]]);
+        if (tm > DRIVE[0][0]) pts.push([X(Math.min(tm,86)), Y(shown), shown, tm]);
+        const fillG = c.createLinearGradient(0, 0, 0, H); fillG.addColorStop(0, "rgba(67,211,195,.22)"); fillG.addColorStop(1, "rgba(255,148,71,.05)");
+        if (pts.length > 1){ c.beginPath(); c.moveTo(pts[0][0], H); pts.forEach(p => c.lineTo(p[0], p[1])); c.lineTo(pts[pts.length-1][0], H); c.closePath(); c.fillStyle = fillG; c.fill(); }
+        for (let i=1;i<pts.length;i++){ const a = pts[i-1], b = pts[i], gap = b[3]-a[3] > 1.6;
+          const p0 = pts[Math.max(0,i-2)], p3 = pts[Math.min(pts.length-1,i+1)];
+          c.strokeStyle = css(mixC(C.calm, C.warm, clamp((85 - (a[2]+b[2])/2)/60,0,1))); c.globalAlpha = gap ? .45 : 1; c.lineWidth = gap ? 1.4 : 2.2;
+          c.beginPath(); c.moveTo(a[0], a[1]);
+          c.bezierCurveTo(a[0] + (b[0]-p0[0])/6, a[1] + (b[1]-p0[1])/6, b[0] - (p3[0]-a[0])/6, b[1] - (p3[1]-a[1])/6, b[0], b[1]); c.stroke(); }
+        c.globalAlpha = 1;
         c.fillStyle = css(cc); c.beginPath(); c.arc(X(Math.min(tm,86)), Y(shown), 3.5, 0, 7); c.fill(); }
       return {grade: k2*.55, fade};
     },
@@ -823,7 +958,7 @@ const ROAD = (() => {
 
 /* ================= 5 · the climb, then the whole world ================= */
 const CLIMB = (() => {
-  const g = ST[4];
+  const g = ST[5];
   const STEPS = [["First version","plain formula",56.28,"start"],["Trained model","learns from examples",69.44],["Sweat bursts","small spikes",72.96],["Smoothing","a few minutes",74.14],["Fast / slow sweat","",76.78],["Change","last 10 min",79.92],["Self-training","tunes to you",81.84,"boost"],["Final","",81.84,"end"]];
   const Y = v => FLOOR_Y + (v - 50)*.36, slabs = [];
   let prev = 50;
@@ -837,7 +972,7 @@ const CLIMB = (() => {
     let ghost = null; if (y0 > FLOOR_Y + .05){ ghost = lineBox(1.6, y0 - FLOOR_Y, 1.9, 0x43d3c3, .08); ghost.position.set(0, (FLOOR_Y + y0)/2, 0); grp.add(ghost); }
     const ring = new THREE.Mesh(new THREE.RingGeometry(1.2, 1.26, 48), new THREE.MeshBasicMaterial({color:col, transparent:true, opacity:0, side:THREE.DoubleSide})); ring.rotation.x = -Math.PI/2; ring.position.y = y1 + .02; grp.add(ring);
     const txt = (kind === "start" || kind === "end") ? `<b>${kind === "end" ? "82%" : Math.round(v) + "%"}</b><br>${name}` : `<b>+${(v - prev).toFixed(1)}</b><br>${name}`;
-    const lb = label(txt, kind === "boost" ? "gold" : kind === "start" ? "" : kind === "end" ? "" : "calm", new THREE.Vector3(x, y1 + .75, 0), 4, {group:g});
+    const lb = label(txt, kind === "boost" ? "gold" : kind === "start" ? "" : kind === "end" ? "" : "calm", new THREE.Vector3(x, y1 + .75, 0), 5, {group:g});
     slabs.push({grp, m, e, ghost, ring, y1, h, lb, at: .6 + i*.62, kind}); if (kind !== "end") prev = v; });
   slabs.forEach(s => s.lb.when = () => phase < 2 && T >= s.at + .3);
   let T = 0, phase = 0, counter = 56.28, reveal = 0;
@@ -875,18 +1010,18 @@ const CLIMB = (() => {
 
 /* ================= the journey, drawn during the final reveal ================= */
 const JOURNEY = (() => {
-  const pts = [new THREE.Vector3(0,.2,0), new THREE.Vector3(44,.6,0), new THREE.Vector3(88,1.2,0), new THREE.Vector3(132,.4,-30), new THREE.Vector3(176,6,0)];
-  const curve = new THREE.CatmullRomCurve3([pts[0], new THREE.Vector3(22,5,8), pts[1], new THREE.Vector3(66,6,10), pts[2], new THREE.Vector3(110,5,4), pts[3], new THREE.Vector3(156,6,-12), pts[4]]);
+  const pts = [new THREE.Vector3(0,.2,0), new THREE.Vector3(22,1.4,-34), new THREE.Vector3(44,.6,0), new THREE.Vector3(88,1.2,0), new THREE.Vector3(132,.4,-30), new THREE.Vector3(176,6,0)];
+  const curve = new THREE.CatmullRomCurve3([pts[0], new THREE.Vector3(8,5,-16), pts[1], new THREE.Vector3(36,5,-16), pts[2], new THREE.Vector3(66,6,10), pts[3], new THREE.Vector3(110,5,4), pts[4], new THREE.Vector3(156,6,-12), pts[5]]);
   const P = curve.getPoints(600), geo = new THREE.BufferGeometry().setFromPoints(P);
   const line = new THREE.Line(geo, new THREE.LineBasicMaterial({color:0x43d3c3, transparent:true, opacity:.9})); line.material.color.multiplyScalar(1.6);
   geo.setDrawRange(0, 0); scene.add(line);
   const head = new THREE.Mesh(new THREE.SphereGeometry(.7, 20, 14), new THREE.MeshBasicMaterial({color:0xffffff})); head.material.color.multiplyScalar(2); scene.add(head); head.visible = false;
-  ["the body","how it learns","one person","real roads","the climb"].forEach((n,i) => label(n, "calm big", pts[i].clone().add(new THREE.Vector3(0, 7, 0)), 4, {when:()=>JOURNEY.k > (i+.5)/5.5}));
+  ["the body","the wristband","how it learns","one person","real roads","the climb"].forEach((n,i) => label(n, "calm big", pts[i].clone().add(new THREE.Vector3(0, 7, 0)), 5, {when:()=>JOURNEY.k > (i+.5)/6.5}));
   return { k:0, set(k){ this.k = k; const n = Math.floor(k*P.length); geo.setDrawRange(0, n); line.visible = k > 0; head.visible = k > 0 && k < 1; if (n > 0) head.position.copy(P[Math.min(P.length-1, n-1)]); } };
 })();
 
 /* ================= director ================= */
-const CH = [ORB, TRAIN, RIB, ROAD, CLIMB];
+const CH = [ORB, WRIST, TRAIN, RIB, ROAD, CLIMB];
 let cur = 0, chT = 0, flight = null;
 const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(); let viewOff = 0, fovNow = 45;
 const holdBtn = $("#hold");
@@ -901,17 +1036,17 @@ function go(i){
   if (reduce){ camPos.copy(world(pose.pos, i)); camLook.copy(world(pose.look, i)); }
   $$(".ch").forEach((c,j) => c.classList.toggle("on", j===i && reduce));
   $$("#chs button").forEach((b,j) => b.setAttribute("aria-current", String(j===i)));
-  $("#count").textContent = String(i+1).padStart(2,"0") + " / 05";
+  $("#count").textContent = String(i+1).padStart(2,"0") + " / 06";
   $("#prev").disabled = i===0; $("#next").disabled = i===CH.length-1;
-  holdBtn.hidden = i!==0; if (i!==0) setHold(false);
+  holdBtn.hidden = i>1; if (i>1) setHold(false);
   $("#orbRead").style.opacity = 0;
-  try { history.replaceState(null, "", i===0 ? location.pathname + location.search : "#" + ["body","learn","person","roads","climb"][i]); } catch(e){}
+  try { history.replaceState(null, "", i===0 ? location.pathname + location.search : "#" + ["body","wristband","learn","person","roads","climb"][i]); } catch(e){}
 }
 $$("#chs button").forEach((b,i) => b.addEventListener("click", () => go(i)));
 $("#prev").addEventListener("click", () => go(cur-1)); $("#next").addEventListener("click", () => go(cur+1));
 addEventListener("keydown", e => {
   const tag = (e.target.tagName||"").toLowerCase();
-  if (e.code === "Space" && tag !== "button" && cur === 0){ e.preventDefault(); if (!e.repeat) setHold(true); return; }
+  if (e.code === "Space" && tag !== "button" && cur <= 1){ e.preventDefault(); if (!e.repeat) setHold(true); return; }
   if (["ArrowRight","ArrowDown","PageDown"].includes(e.key)){ e.preventDefault(); go(cur+1); }
   else if (["ArrowLeft","ArrowUp","PageUp"].includes(e.key)){ e.preventDefault(); go(cur-1); }
   else if (e.key === "Home") go(0); else if (e.key === "End") go(CH.length-1);
@@ -950,18 +1085,18 @@ function tick(dt, draw){
   if (Math.abs(viewOff) > .001) camera.setViewOffset(innerWidth, innerHeight, viewOff*innerWidth, 0, innerWidth, innerHeight); else camera.clearViewOffset();
   const fovT = (!flight && pose.fov) ? pose.fov : 45; if (Math.abs(fovT - fovNow) > .01){ fovNow = lerp(fovNow, fovT, 1 - Math.exp(-dt/.6)); camera.fov = fovNow; camera.updateProjectionMatrix(); }
   // visibility: only nearby stations draw, except during the final reveal
-  const rev = cur === 4 ? (out.reveal || 0) : 0;
-  ST.forEach((s,i) => { s.visible = rev > .02 || i === cur || (flight && Math.abs(i - cur) <= 4); });
+  const rev = cur === 5 ? (out.reveal || 0) : 0;
+  ST.forEach((s,i) => { s.visible = !!(rev > .02 || i === cur || (flight && Math.abs(i - cur) <= 5)); });
   scene.fog.density = lerp(fogBase, .0042, rev);
-  JOURNEY.set(cur === 4 ? clamp((rev - .55)/.45, 0, 1) : 0);
+  JOURNEY.set(cur === 5 ? clamp((rev - .55)/.45, 0, 1) : 0);
   finalPass.uniforms.uTime.value += dt; finalPass.uniforms.uGrade.value = lerp(finalPass.uniforms.uGrade.value, out.grade || 0, 1 - Math.exp(-dt/.8));
-  finalPass.uniforms.uFade.value = cur === 3 ? (out.fade ?? 1) : 1;
+  finalPass.uniforms.uFade.value = cur === 4 ? (out.fade ?? 1) : 1;
   // orb read-out sits under the orb
   if (cur === 0){ tmpV.set(0, -1.95, 0); ST[0].localToWorld(tmpV); tmpV.project(camera); const el = $("#orbRead");
     el.style.transform = `translate(${((tmpV.x*.5+.5)*innerWidth).toFixed(1)}px,${((-tmpV.y*.5+.5)*innerHeight).toFixed(1)}px) translate(-50%,0)`; }
   // chapter progress in the nav
   const btn = $$("#chs button")[cur]; btn.style.setProperty("--p", (clamp(chT/(C0.dur||30),0,1)*100).toFixed(1) + "%");
-  const live = cur === 0 ? mixC(C.calm, C.warm, clamp((95-sim.score)/50,0,1)) : cur === 3 && out.grade > .1 ? C.warm : C.calm;
+  const live = cur <= 1 ? mixC(C.calm, C.warm, clamp((95-sim.score)/50,0,1)) : cur === 4 && out.grade > .1 ? C.warm : C.calm;
   document.documentElement.style.setProperty("--live", css(live));
   if (draw !== false){ placeLabels(); composer.render(dt); }
 }
@@ -970,11 +1105,11 @@ function frame(now){ requestAnimationFrame(frame); const dt = clamp((now - last)
   frames++; if (dt > .034) slow++; if (frames === 90 && slow > 50 && PR > 1){ PR = 1; renderer.setPixelRatio(PR); composer.setSize(innerWidth, innerHeight); }
   try { tick(dt); } catch(e){ if (!frame.warned){ frame.warned = true; console.error(e); } } }
 // start
-{ const h = location.hash.slice(1), i = ["body","learn","person","roads","climb"].indexOf(h);
+{ const h = location.hash.slice(1), i = ["body","wristband","learn","person","roads","climb"].indexOf(h);
   const start = i < 0 ? 0 : i; cur = start; CH[start].enter(); const pose = CH[start].cam(0, .016);
   camPos.copy(world(pose.pos, start)); camLook.copy(world(pose.look, start));
   $$(".ch").forEach((c,j) => c.classList.toggle("on", j===start)); $$("#chs button").forEach((b,j) => b.setAttribute("aria-current", String(j===start)));
-  $("#count").textContent = String(start+1).padStart(2,"0") + " / 05"; $("#prev").disabled = start===0; holdBtn.hidden = start!==0; }
+  $("#count").textContent = String(start+1).padStart(2,"0") + " / 06"; $("#prev").disabled = start===0; holdBtn.hidden = start>1; }
 requestAnimationFrame(frame);
 })();
 </script>
