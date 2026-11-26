@@ -152,19 +152,18 @@ h1 em,h2 em{font-style:italic;color:var(--calm)}
   .hold kbd{display:none}
   .hold{left:50%;transform:translateX(-50%)}
   .res{text-align:left}
-  .motion{display:none}
+  #motion{display:none}
 }
 .rm .ch .blk{transition:none!important}
 .rm .hold .ring{animation:none}
 </style>
-</head><body>
 
 <canvas id="gl" aria-label="BodySync, a 3D walkthrough"></canvas>
 <div id="labels" aria-hidden="true"></div>
 
 <header class="top">
   <div class="brand"><i></i>BodySync</div>
-  <div class="topr"><button type="button" class="motion" id="motion">Animations on</button><div class="count" id="count">01 / 06</div></div>
+  <div class="topr"><button type="button" class="motion" id="sound" aria-pressed="false">Sound off</button><button type="button" class="motion" id="motion">Animations on</button><div class="count" id="count">01 / 06</div></div>
 </header>
 
 <!-- chapter 1: the body -->
@@ -416,6 +415,68 @@ function simStep(dt){
 }
 for (let i=0;i<600;i++) simStep(.05);
 sim.lastBurst = sim.bursts.length ? sim.bursts[sim.bursts.length-1] : 0;
+
+/* ================= sound: synthesised live, synced to what is on screen ================= */
+const SND = (() => {
+  let ctx = null, on = false, master, wet, padF, padG, eng, engF, engG, tyreG, noiseBuf, tens = 0, lastBeat = 0, lastBurst = sim.lastBurst, lastTick = 0;
+  const N = [220, 261.63, 293.66, 329.63, 392, 440, 523.25, 659.25];
+  function init(){
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 4; comp.connect(ctx.destination);
+    master = ctx.createGain(); master.gain.value = 0; master.connect(comp);
+    const n = ctx.sampleRate*3.2, ir = ctx.createBuffer(2, n, ctx.sampleRate);
+    for (let c=0;c<2;c++){ const d = ir.getChannelData(c); for (let i=0;i<n;i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/n, 3); }
+    const rev = ctx.createConvolver(); rev.buffer = ir; wet = ctx.createGain(); wet.gain.value = .32; wet.connect(rev); rev.connect(master);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate); const nd = noiseBuf.getChannelData(0); for (let i=0;i<nd.length;i++) nd[i] = Math.random()*2-1;
+    // a low drone that opens up with stress
+    padF = ctx.createBiquadFilter(); padF.type = "lowpass"; padF.frequency.value = 420; padF.Q.value = .8;
+    padG = ctx.createGain(); padG.gain.value = .045; padF.connect(padG); padG.connect(master); padG.connect(wet);
+    [[55,"sawtooth",.3],[82.41,"sawtooth",.22],[110,"triangle",.3],[164.81,"triangle",.2],[220.4,"sine",.18]].forEach(([f,type,v],i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.value = f; o.detune.value = i%2 ? 6 : -6; g.gain.value = v; o.connect(g); g.connect(padF); o.start(); });
+    const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = .06; lg.gain.value = 140; lfo.connect(lg); lg.connect(padF.frequency); lfo.start();
+    // the car: engine hum and tyre noise, following the real drive's speed
+    engF = ctx.createBiquadFilter(); engF.type = "lowpass"; engF.frequency.value = 160; engG = ctx.createGain(); engG.gain.value = 0;
+    eng = ctx.createOscillator(); eng.type = "sawtooth"; eng.frequency.value = 36; eng.connect(engF); engF.connect(engG); engG.connect(master); eng.start();
+    const tn = ctx.createBufferSource(); tn.buffer = noiseBuf; tn.loop = true; const tf = ctx.createBiquadFilter(); tf.type = "bandpass"; tf.frequency.value = 520; tf.Q.value = .5;
+    tyreG = ctx.createGain(); tyreG.gain.value = 0; tn.connect(tf); tf.connect(tyreG); tyreG.connect(master); tn.start();
+  }
+  const env = (g, t, a, v, d) => { g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(.0002, v), t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); };
+  function thump(t, f, v){ const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(f*1.7, t); o.frequency.exponentialRampToValueAtTime(f, t + .07);
+    o.connect(g); g.connect(master); env(g, t, .006, v, .2); o.start(t); o.stop(t + .3); }
+  function bell(t, f, v, dec){ [1, 2.76, 5.4].forEach((m,i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f*m;
+    o.connect(g); g.connect(master); g.connect(wet); env(g, t, .004, v/(1 + i*2.4), dec/(1 + i*.9)); o.start(t); o.stop(t + dec + .2); }); }
+  function blip(t, f, v){ const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "triangle"; o.frequency.value = f; o.connect(g); g.connect(master); g.connect(wet); env(g, t, .002, v, .08); o.start(t); o.stop(t + .14); }
+  function chord(t, fs, v, a, d){ fs.forEach((f,i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = i ? "sine" : "triangle"; o.frequency.value = f; o.detune.value = (i%3 - 1)*5;
+    o.connect(g); g.connect(master); g.connect(wet); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); o.start(t); o.stop(t + a + d + .1); }); }
+  function whoosh(t, dur){ const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 1.1;
+    f.frequency.setValueAtTime(220, t); f.frequency.exponentialRampToValueAtTime(1700, t + dur*.5); f.frequency.exponentialRampToValueAtTime(200, t + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.16, t + dur*.45); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(master); g.connect(wet); s.start(t); s.stop(t + dur + .05); }
+  return {
+    get on(){ return on; },
+    set(v){ if (v && !ctx){ try { init(); } catch(e){ return false; } } if (!ctx) return false; on = v; if (on) ctx.resume();
+      const t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(on ? .85 : 0, t, .25); return on; },
+    flight(dur){ if (on) whoosh(ctx.currentTime, dur); },
+    chime(b){ if (on) bell(ctx.currentTime, [329.63, 392, 440, 523.25, 659.25][b] || 440, .1, 2.2); },
+    tick(){ if (!on) return; const t = ctx.currentTime; if (t - lastTick < .045) return; lastTick = t; blip(t, 900 + Math.random()*900, .035); },
+    land(i, kind){ if (!on) return; const t = ctx.currentTime; thump(t, 48, .3);
+      if (kind === "boost"){ bell(t, 523.25, .2, 2.6); bell(t + .1, 783.99, .13, 2.4); }
+      else if (kind === "end") [220, 329.63, 440, 554.37].forEach((f,k) => bell(t + k*.06, f, .12, 3.4));
+      else bell(t, N[i], .16, 1.6); },
+    swell(big){ if (!on) return; const t = ctx.currentTime;
+      if (big) chord(t, [55, 110, 164.81, 220, 277.18, 329.63, 440], .045, 2.4, 6.5); else chord(t, [110, 164.81, 220, 329.63], .035, 1.4, 3.5); },
+    update(dt, st){ if (!on) return; const t = ctx.currentTime;
+      if (st.heart && sim.beat > lastBeat + .5){ const v = .32 + .25*sim.s; thump(t, 54, v); thump(t + .14, 45, v*.6); }
+      lastBeat = sim.beat;
+      const nb = sim.bursts.length ? sim.bursts[sim.bursts.length - 1] : 0;
+      if (st.heart && nb !== lastBurst) blip(t, 1900 + Math.random()*800, .05); lastBurst = nb;
+      tens = lerp(tens, clamp(st.tension, 0, 1), 1 - Math.exp(-dt/1.2));
+      padF.frequency.setTargetAtTime(380 + tens*1500, t, .3); padG.gain.setTargetAtTime(.045 + tens*.035, t, .4);
+      const sp = st.speed == null ? -1 : st.speed;
+      engG.gain.setTargetAtTime(sp < 0 ? 0 : .04 + Math.min(.08, sp*.004), t, .3); tyreG.gain.setTargetAtTime(sp < 0 ? 0 : Math.min(.07, sp*.003), t, .3);
+      if (sp >= 0){ eng.frequency.setTargetAtTime(32 + sp*1.3, t, .4); engF.frequency.setTargetAtTime(130 + sp*10, t, .4); } }
+  };
+})();
 
 /* ================= 1 · the body (orb) ================= */
 const NOISE = `vec3 mod289(vec3 x){return x-floor(x*(1./289.))*289.;}vec4 mod289(vec4 x){return x-floor(x*(1./289.))*289.;}
@@ -737,7 +798,7 @@ const TRAIN = (() => {
       if (beat===4){
         const hidden = people.filter(pp => pp.hid);
         if (!reduce) hidden.forEach((pp,i) => { const at = .9 + 2.6*i/hidden.length; if (bt > at && !pp.sent){ pp.sent = true;
-            const f = shoot(pp.cur, MODEL.clone().add(new THREE.Vector3(0,.35,0)), C.calm, .75); f.cb = () => { pp.scored = 1; glow = Math.min(1, glow + .05); }; } });
+            const f = shoot(pp.cur, MODEL.clone().add(new THREE.Vector3(0,.35,0)), C.calm, .75); f.cb = () => { pp.scored = 1; glow = Math.min(1, glow + .05); SND.tick(); }; } });
         else hidden.forEach(pp => pp.scored = 1);
         counter = reduce ? 85 : 50 + 35*easeOut((bt-1.3)/2.6);
         $("#trN").textContent = Math.round(counter) + "%"; $("#trN").style.opacity = bt > 1 || reduce ? 1 : 0; $("#trNs").style.opacity = bt > 1 || reduce ? 1 : 0;
@@ -946,7 +1007,7 @@ const ROAD = (() => {
           c.bezierCurveTo(a[0] + (b[0]-p0[0])/6, a[1] + (b[1]-p0[1])/6, b[0] - (p3[0]-a[0])/6, b[1] - (p3[1]-a[1])/6, b[0], b[1]); c.stroke(); }
         c.globalAlpha = 1;
         c.fillStyle = css(cc); c.beginPath(); c.arc(X(Math.min(tm,86)), Y(shown), 3.5, 0, 7); c.fill(); }
-      return {grade: k2*.55, fade};
+      return {grade: k2*.55, fade, speed: cv};
     },
     cam(t, dt){
       const sp = clamp(cv/26, 0, 1);
@@ -964,37 +1025,40 @@ const CLIMB = (() => {
   let prev = 50;
   STEPS.forEach(([name, sub, v, kind], i) => {
     const y0 = (kind === "start" || kind === "end") ? FLOOR_Y : Y(prev), y1 = Y(v), h = Math.max(.08, y1 - y0), x = -7.4 + i*2.1;
-    const col = kind === "start" ? new THREE.Color(.42,.48,.56) : kind === "boost" ? C.gold.clone().multiplyScalar(1.6) : kind === "end" ? new THREE.Color(1.5,1.55,1.6) : C.calm.clone().multiplyScalar(1.15);
+    const col = kind === "start" ? new THREE.Color(.36,.42,.5) : kind === "boost" ? C.gold.clone().multiplyScalar(.95) : kind === "end" ? C.calm.clone().multiplyScalar(.62) : C.calm.clone().multiplyScalar(.8);
     const grp = new THREE.Group(); grp.position.set(x, 0, 0); g.add(grp);
-    const m = new THREE.Mesh(new THREE.BoxGeometry(1.6, h, 1.9), new THREE.MeshBasicMaterial({color:col, transparent:true, opacity: kind === "end" ? .9 : .8}));
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1.6, h, 1.9), new THREE.MeshBasicMaterial({color:col, transparent:true, opacity: kind === "end" ? .7 : .72}));
     m.position.y = y0 + h/2; grp.add(m);
-    const e = lineBox(1.62, h+.02, 1.92, 0xffffff, .55); e.position.copy(m.position); grp.add(e);
+    const e = lineBox(1.62, h+.02, 1.92, kind === "end" ? 0xbff5ee : 0xffffff, kind === "end" ? .8 : .45); e.position.copy(m.position); grp.add(e);
     let ghost = null; if (y0 > FLOOR_Y + .05){ ghost = lineBox(1.6, y0 - FLOOR_Y, 1.9, 0x43d3c3, .08); ghost.position.set(0, (FLOOR_Y + y0)/2, 0); grp.add(ghost); }
     const ring = new THREE.Mesh(new THREE.RingGeometry(1.2, 1.26, 48), new THREE.MeshBasicMaterial({color:col, transparent:true, opacity:0, side:THREE.DoubleSide})); ring.rotation.x = -Math.PI/2; ring.position.y = y1 + .02; grp.add(ring);
     const txt = (kind === "start" || kind === "end") ? `<b>${kind === "end" ? "82%" : Math.round(v) + "%"}</b><br>${name}` : `<b>+${(v - prev).toFixed(1)}</b><br>${name}`;
     const lb = label(txt, kind === "boost" ? "gold" : kind === "start" ? "" : kind === "end" ? "" : "calm", new THREE.Vector3(x, y1 + .75, 0), 5, {group:g});
-    slabs.push({grp, m, e, ghost, ring, y1, h, lb, at: .6 + i*.62, kind}); if (kind !== "end") prev = v; });
+    slabs.push({grp, m, e, ghost, ring, y1, h, lb, at: .6 + i*.62, kind, snd:false}); if (kind !== "end") prev = v; });
   slabs.forEach(s => s.lb.when = () => phase < 2 && T >= s.at + .3);
-  let T = 0, phase = 0, counter = 56.28, reveal = 0;
+  let T = 0, phase = 0, counter = 56.28, reveal = 0, overview = 0, sOv = false, sRev = false;
   const camP = new THREE.Vector3(), camL = new THREE.Vector3(); let camInit = false;
   return {
-    group:g, dur: 26,
-    enter(){ T = 0; phase = 0; reveal = 0; counter = 56.28; camInit = false; $("#finale").style.opacity = 0; $("#finale").style.transform = "translateY(14px)"; $("#climbHead").style.opacity = ""; $("#climbCount").style.opacity = "";
+    group:g, dur: 28,
+    enter(){ T = 0; phase = 0; reveal = 0; overview = 0; sOv = false; sRev = false; slabs.forEach(s => s.snd = false); counter = 56.28; camInit = false; $("#finale").style.opacity = 0; $("#finale").style.transform = "translateY(14px)"; $("#climbHead").style.opacity = ""; $("#climbCount").style.opacity = "";
       slabs.forEach(s => { s.grp.visible = reduce; s.grp.position.y = 0; }); },
     update(dt, t){
       T = reduce ? 30 : t;
       let top = 56.28;
       slabs.forEach((s,i) => { const k = clamp((T - s.at)/.75, 0, 1); s.grp.visible = k > 0 || reduce; s.grp.position.y = (1 - easeBack(k))*7;
         const landed = T - s.at - .75; s.ring.material.opacity = landed > 0 && landed < 1 ? (1 - landed)*.9 : 0; s.ring.scale.setScalar(1 + Math.max(0, landed)*2.2);
-        if (k >= 1 && s.kind !== "end") top = STEPS[i][2]; });
+        if (k >= 1 && s.kind !== "end") top = STEPS[i][2];
+        if (!reduce && landed >= -.05 && !s.snd){ s.snd = true; SND.land(i, s.kind); } });
       counter = lerp(counter, top, 1 - Math.exp(-dt/.25)); if (reduce) counter = 81.84;
       $("#clN").textContent = Math.round(counter) + "%";
-      phase = T < 7.4 ? 0 : T < 10.5 ? 1 : 2;
+      phase = T < 7.4 ? 0 : T < 12 ? 1 : 2;
       if (phase >= 1) $("#clS").textContent = "85% on people it never saw";
       else $("#clS").textContent = "five-study average";
-      reveal = reduce ? 1 : easeIO((T - 10.5)/4.5);
-      $("#climbHead").style.opacity = 1 - clamp((T-10.5)/1.2, 0, 1); $("#climbCount").style.opacity = 1 - clamp((T-10.5)/1.2, 0, 1);
-      const fin = clamp((T - 13)/1.5, 0, 1); $("#finale").style.opacity = fin; $("#finale").style.transform = `translateY(${(1-fin)*14}px)`;
+      overview = reduce ? 0 : easeIO((T - 6)/2.2);
+      reveal = reduce ? 1 : easeIO((T - 12)/4.5);
+      if (!reduce && T > 6 && !sOv){ sOv = true; SND.swell(0); } if (!reduce && T > 12 && !sRev){ sRev = true; SND.swell(1); }
+      $("#climbHead").style.opacity = 1 - clamp((T-12)/1.2, 0, 1); $("#climbCount").style.opacity = 1 - clamp((T-12)/1.2, 0, 1);
+      const fin = clamp((T - 14.5)/1.5, 0, 1); $("#finale").style.opacity = fin; $("#finale").style.transform = `translateY(${(1-fin)*14}px)`;
       return {grade:0, reveal};
     },
     cam(t, dt){
@@ -1002,7 +1066,9 @@ const CLIMB = (() => {
       const lx = -7.4 + i*2.1 + 1, ly = Math.max(-1.2, s.y1 - .4);
       const cp = new THREE.Vector3(lx - 4.2, ly + 2.2, 11.5), cl = new THREE.Vector3(lx + 1.2, ly - .2, 0);
       const wp = new THREE.Vector3(-88 + Math.sin(t*.05)*10, 52, 150), wl = new THREE.Vector3(-88, -4, -40);
-      const tp = cp.lerp(wp, reveal), tlk = cl.lerp(wl, reveal);
+      // the whole graph, slowly orbiting, before the pull back to the world
+      const op = new THREE.Vector3(.4 + Math.sin(t*.35)*3.2, 4.6, 22.5), ol = new THREE.Vector3(.4, 3.3, 0);
+      const tp = cp.lerp(op, overview).lerp(wp, reveal), tlk = cl.lerp(ol, overview).lerp(wl, reveal);
       if (!camInit || reduce){ camP.copy(tp); camL.copy(tlk); camInit = true; } else { camP.lerp(tp, 1 - Math.exp(-(dt||.016)/.7)); camL.lerp(tlk, 1 - Math.exp(-(dt||.016)/.7)); }
       return {pos:camP.clone(), look:camL.clone(), off:0}; }
   };
@@ -1022,7 +1088,7 @@ const JOURNEY = (() => {
 
 /* ================= director ================= */
 const CH = [ORB, WRIST, TRAIN, RIB, ROAD, CLIMB];
-let cur = 0, chT = 0, flight = null;
+let cur = 0, chT = 0, flight = null, trainBeat = -1;
 const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(); let viewOff = 0, fovNow = 45;
 const holdBtn = $("#hold");
 function setHold(on){ sim.hold = on; holdBtn.classList.toggle("on", on); }
@@ -1032,7 +1098,8 @@ function go(i){
   const from = {pos: camPos.clone(), look: camLook.clone()};
   cur = i; chT = 0; CH[i].enter();
   const pose = CH[i].cam(0, .016);
-  flight = reduce ? null : {from, t:0, dur: 2.6};
+  flight = reduce ? null : {from, t:0, dur: 2.6}; trainBeat = -1;
+  if (flight) SND.flight(2.6);
   if (reduce){ camPos.copy(world(pose.pos, i)); camLook.copy(world(pose.look, i)); }
   $$(".ch").forEach((c,j) => c.classList.toggle("on", j===i && reduce));
   $$("#chs button").forEach((b,j) => b.setAttribute("aria-current", String(j===i)));
@@ -1062,6 +1129,8 @@ addEventListener("touchend", e => { if (tx === null) return; const dx = e.change
 function motionLabel(){ const b = $("#motion"); b.textContent = reduce ? (sysReduce ? "Animations off · turn on" : "Animations off") : "Animations on"; b.classList.toggle("off", reduce); }
 $("#motion").addEventListener("click", () => { reduce = !reduce; try { localStorage.setItem("bodysync-motion", reduce ? "off" : "on"); } catch(e){} document.documentElement.classList.toggle("rm", reduce); motionLabel(); go(cur); });
 motionLabel();
+function soundLabel(){ const b = $("#sound"); b.textContent = SND.on ? "Sound on" : "Sound off"; b.setAttribute("aria-pressed", String(SND.on)); }
+$("#sound").addEventListener("click", () => { SND.set(!SND.on); soundLabel(); });
 
 const fogBase = .03; let frames = 0, slow = 0;
 function tick(dt, draw){
@@ -1089,6 +1158,8 @@ function tick(dt, draw){
   ST.forEach((s,i) => { s.visible = !!(rev > .02 || i === cur || (flight && Math.abs(i - cur) <= 5)); });
   scene.fog.density = lerp(fogBase, .0042, rev);
   JOURNEY.set(cur === 5 ? clamp((rev - .55)/.45, 0, 1) : 0);
+  if (cur === 2 && !flight){ const b = clamp(Math.floor(chT/5.6), 0, 4); if (b !== trainBeat){ trainBeat = b; SND.chime(b); } }
+  SND.update(dt, {heart: cur <= 1, tension: cur <= 1 ? sim.s : (out.grade || 0)*1.8, speed: cur === 4 ? out.speed : null});
   finalPass.uniforms.uTime.value += dt; finalPass.uniforms.uGrade.value = lerp(finalPass.uniforms.uGrade.value, out.grade || 0, 1 - Math.exp(-dt/.8));
   finalPass.uniforms.uFade.value = cur === 4 ? (out.fade ?? 1) : 1;
   // orb read-out sits under the orb
