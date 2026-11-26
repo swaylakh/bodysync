@@ -8,7 +8,7 @@ Team: Swayam Lakhotia, Ananya Khaitan, Bhavya Bajaj. Code: https://github.com/sw
 | What | File |
 |---|---|
 | Final slides (15 slides) | `docs/slides/BodySync_Final.pptx` (PDF copy: `docs/slides/BodySync_Final.pdf`) |
-| Final report (6 pages) | `report/BodySync_Final_Report.pdf` |
+| Final report (7 pages) | `report/BodySync_Final_Report.pdf` |
 | Report source (LaTeX) | `report/BodySync_Final_Report.tex` + figures `fig7`–`fig10` in `figures/` (made by `src/report_figures.py`) |
 | Interactive 3D walkthrough | `docs/interactive/BodySync_3D.html` (open in a browser; needs internet for the 3D library) |
 | Presenter guide | `docs/presenter_guide.md`, with detailed notes per person in `docs/presenter_notes/` |

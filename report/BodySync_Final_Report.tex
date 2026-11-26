@@ -4,6 +4,7 @@
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 \usepackage{booktabs}
+\usepackage{amsmath}
 \usepackage{caption}
 \usepackage{float}
 \usepackage[hidelinks]{hyperref}
@@ -25,7 +26,15 @@ Everyone's normal is different, so BodySync compares you only with yourself, nev
 
 \section{What we tried first}
 
-Our first version asked whether the signals \emph{move together} the way they usually do (``sync''). For every 30 minutes we measured how strongly each pair of signals rises and falls together. This carried almost no information: given only sync, a model told asleep, resting and active apart 37\% of the time (random guessing: 33\%), and it did not pick out lab stress on WESAD (0.46, where 0.5 is a coin flip). How far the signals are from a person's own normal worked much better, so the final BodySync is built on that.
+Our first idea was that stress throws the body \emph{out of step}: normally heart rate, sweat and skin temperature rise and fall together in a person's usual way, and stress might break that pattern (``sync''). For every 30-minute window we computed the correlation between each pair of signals (heart rate--sweat, heart rate--temperature, sweat--temperature) and compared it with that person's usual correlation.
+
+We checked this idea in two ways:
+\begin{itemize}
+\item \textbf{Does sync carry any information?} On an everyday dataset of 27 people who wore an Empatica wristband for several days, a model given only the three sync values had to tell asleep, resting (awake and still) and active apart, using the watch's own labels and testing each person on a model trained on the others. It was right 37\% of the time, where random guessing gets 33\%.
+\item \textbf{Does it see stress?} On the WESAD lab study, a sync score picked out stress 0.46 of the time, where 0.5 is a coin flip.
+\end{itemize}
+
+The signals stayed in step whether people were stressed or calm. What did change under stress was their \emph{level}: heart rate and sweat went up and the skin cooled, compared with that person's usual values. So the final BodySync measures how far each signal is from a person's own normal, not how the signals move together.
 
 \section{How BodySync works}
 
@@ -36,7 +45,42 @@ Our first version asked whether the signals \emph{move together} the way they us
 \item \textbf{The score} is smoothed over the last few minutes, since stress lasts minutes, not seconds.
 \end{enumerate}
 
-The first version of the personal-normal score (``first version'' below) was a plain formula with no learning: for heart rate, sweat and skin temperature, measure how many of the person's usual swings (median absolute deviation) they are from their own normal, counting only the stress direction (heart rate up, sweat up, temperature down); take the root-mean-square of these as the \emph{distance}, and set score $= 100 / (1 + \mathrm{distance}/2)$. At your normal the score is 100; two usual swings away it is 50. The final BodySync replaces this formula with a trained model.
+\subsection*{The first version: a plain formula}
+
+The first version of the personal-normal score (``first version'' below) has no learning. For each signal $i$ (heart rate, sweat, skin temperature), it measures how far the current value $x_i$ is from that person's normal, in units of their usual spread. This is a z-score:
+\[
+z_i = \frac{x_i - \mathrm{normal}_i}{\mathrm{spread}_i},
+\]
+where the normal is the person's median and the spread is a robust standard deviation (the median absolute deviation, times 1.48, so that a few odd moments do not inflate it). Sweat is used on a log scale, because it varies hugely between people, and each spread has a small minimum (2 bpm for heart rate, 0.1\,\textdegree C for temperature) so that very steady people do not get huge z-scores from tiny changes.
+
+Only the stress direction counts: heart rate up, sweat up, temperature \emph{down}. A heart rate below normal or warmer hands is not stress, so those count as zero ($z_i^+ = \max(0, z_i)$, with the sign of temperature flipped). The three are combined into one distance and turned into a score:
+\[
+d = \sqrt{\tfrac{1}{3}\left( (z^+_{\mathrm{HR}})^2 + (z^+_{\mathrm{sweat}})^2 + (z^+_{\mathrm{temp}})^2 \right)}, \qquad \mathrm{score} = \frac{100}{1 + d/2}.
+\]
+
+\begin{table}[H]
+\centering\small
+\caption{A worked example. Heart rate and sweat are both two spreads above normal; temperature is at normal.}
+\begin{tabular}{lcccc}
+\toprule
+Signal & Normal & Spread & Now & $z^+$ \\
+\midrule
+Heart rate & 70 bpm & 5 bpm & 80 bpm & $(80-70)/5 = 2$ \\
+Sweat & usual level & usual spread & 2 spreads above & 2 \\
+Skin temperature & usual level & usual spread & at normal & 0 \\
+\midrule
+\multicolumn{5}{l}{$d = \sqrt{(2^2 + 2^2 + 0^2)/3} \approx 1.63$, \quad score $= 100/(1 + 1.63/2) \approx 55$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At your normal $d = 0$ and the score is 100; one spread away gives 67, two give 50 and six give 25. The score never reaches 0.
+
+\subsection*{The final version: a model that learns, then tunes itself to you}
+
+The final BodySync keeps the same idea (everything is measured as a distance from the person's own normal) but replaces the fixed formula with a trained model. Its inputs are the distances for heart rate, sweat and temperature, plus sweat bursts, heart-rate variability, the fast and slow parts of the sweat signal, whether heart rate and temperature are rising or falling, and how much each changed over the last 10 minutes. The model is XGBoost: many small decision trees whose votes are added up. Because it only ever sees distances from each person's normal, one model works for everyone.
+
+\textbf{Self-training} then tunes it to each new person without any stress answers: the model scores all of that person's unmarked time, takes the 10\% of moments that look most stressed and the 10\% that look calmest as extra ``stress'' and ``calm'' examples, retrains once, and scores the person again. Weighting these examples more, or retraining continuously as new data comes in, did not help further.
 
 \section{Data}
 
@@ -63,7 +107,7 @@ All five stress datasets use the same wristband, the Empatica E4.
 \begin{itemize}
 \item \textbf{Locked test people.} Before building the final system we set aside 40\% of the people in every dataset. All improvements were developed on the other 60\%, and the locked group was used once, at the very end. All results below are on them.
 \item \textbf{Unseen people only.} Each test person is scored by a model that never saw their labels.
-\item \textbf{The number.} For each person: take one stressed moment and one calm moment; how often does the stressed one score lower? 0.5 is a coin flip and 1 means always (the within-person AUC).
+\item \textbf{The number.} For each person, take every pair of one stressed moment and one calm moment, and count how often the stressed one scores lower; then average over people. 0.5 is a coin flip and 1 means always (the within-person AUC). Because it is computed within each person, it cannot be fooled by one person simply having higher readings than another. So 0.90 means: pick a stressed and a calm moment from the same person, and the stressed one scores lower 9 times out of 10.
 \item \textbf{Leak check.} With each person's stress labels scrambled, the final model scores 0.51 on average, a coin flip, so the gains are not an artefact.
 \item \textbf{Shortcut checks.} In lab studies, stress can come with things that are not stress: talking and moving during the task, or always coming before the rest periods. The lab results hold with wrist movement removed from the model (WESAD 0.99+, Stress + exercise 0.91, Stress-Predict 0.88) and when rest periods right after a stressor are left out (0.99+, 0.91, 0.90). Timing is harder to rule out: in these studies stress always comes at the same point in the session, so a model given only the clock also scores high (WESAD 0.97, Stress-Predict 0.96, Stress + exercise 0.78). BodySync never sees the clock, but lab data alone cannot prove it is not partly tracking time; the driving test below does not have this problem.
 \end{itemize}

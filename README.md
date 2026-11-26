@@ -258,7 +258,7 @@ Each loader's docstring explains its file layout and labelling rules. They all w
 src/            pipeline; src/datasets/ has one loader per external dataset
 results/        result tables
 figures/        fig1 typical day, fig2 coupling by state, fig3 example week, fig4 all datasets, fig5 sync vs BodySync, fig6 final locked-test results
-report/         BodySync_Final_Report.tex/.pdf = final 5-page report; main.tex (+ refs.bib, tables/) = full earlier report, overleaf.tex = the same as one file; archive/ = progress report
+report/         BodySync_Final_Report.tex/.pdf = final report; main.tex (+ refs.bib, tables/) = full earlier report, overleaf.tex = the same as one file; archive/ = progress report
 docs/           paper summary, related work; slides/BodySync_Final.pptx = final deck, slides/archive/ = earlier weekly and progress decks
 data/           datasets (not in git)
 ```
