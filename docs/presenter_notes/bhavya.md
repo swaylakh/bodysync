@@ -1,4 +1,4 @@
-# Bhavya: slides 10–14 (the real world)
+# Bhavya: slides 10–15 (the real world)
 
 You take over from Swayam and close the talk. Your job is to show **where the data came from, that it works on real roads, and what the score looks like for one person.** You answer questions on the studies and driving.
 
@@ -45,7 +45,17 @@ The answer:
 2. "Lab stress: spotted 9 times out of 10, on people it had never seen."
 3. "Real world: a good start. It tells city driving from highway driving; everyday stress is still the hard part."
 
-### Slide 14: thank you
+### Slide 14: limitations
+> "Before we finish, the limits."
+
+- **Small test groups:** everyday life rests on 10 hidden people and driving on 9, so those numbers are uncertain.
+- **Lab timing:** in the lab, stress always comes at the same point in the session, so a clock alone scores 78–97%. BodySync never sees the clock; the driving test, where time alone scores 50%, is our answer.
+- **Everyday life is hard:** milder stress, rated a few times a day; calm ratings cluster in the evening.
+- **The normal uses all the data:** each person's normal comes from their whole recording. A real app would only have the past. (A past-only normal was tried and didn't help.)
+- **Stretches, not every spike:** it tells stressful stretches from calm ones but hardly follows the drivers' moment-to-moment rating (correlation about 0.1).
+- **One wristband:** all stress data is from the Empatica E4; other devices are untested.
+
+### Slide 15: thank you
 > "Thank you. We're happy to take questions."
 
 ## The details behind your slides

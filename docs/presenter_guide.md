@@ -6,7 +6,7 @@
 |---|---|---|
 | **Ananya** | 1–4 | **The idea.** What BodySync is, what we tried first, the new idea, how it works. |
 | **Swayam** | 5–9 | **The method and results.** How the model learns, how we tested it, what we found. |
-| **Bhavya** | 10–14 | **The real world.** The studies, real roads, one person's score, takeaways. |
+| **Bhavya** | 10–15 | **The real world.** The studies, real roads, one person's score, takeaways, limitations. |
 
 Each person hands over with one line: Ananya → "Swayam will show how it learns and what we found." Swayam → "Bhavya will show the studies and how it does on real roads."
 
@@ -75,7 +75,7 @@ Each person hands over with one line: Ananya → "Swayam will show how it learns
 - Each bar averages five studies, driving included.
 - Hand over to Bhavya.
 
-## Bhavya: slides 10–14
+## Bhavya: slides 10–15
 
 **Slide 10, the studies behind the results.**
 - Five public studies, all with the same Empatica wristband.
@@ -101,7 +101,14 @@ Each person hands over with one line: Ananya → "Swayam will show how it learns
 - Lab stress: spotted about 9 times out of 10, on people it had never seen.
 - Real world: a good start. It tells city from highway driving; everyday stress is still the hard part.
 
-**Slide 14, thank you.**
+**Slide 14, limitations.**
+- Small test groups: everyday life rests on 10 hidden people, driving on 9.
+- Lab timing: stress always comes at the same point in a lab session, so a clock alone scores high there. The driving test is the answer.
+- Everyday stress is milder and rated rarely; calm ratings cluster in the evening.
+- Each person's normal uses their whole recording; a real app would only have the past.
+- It tells stressful stretches apart, not every moment-to-moment spike. All data is from one wristband family (Empatica E4).
+
+**Slide 15, thank you.**
 - "Thank you. We're happy to take questions."
 
 ## Detailed notes per presenter

@@ -139,9 +139,13 @@ Self-training matters most here: without it, the model that never saw the datase
 \section{Limitations}
 
 \begin{itemize}
-\item The daily-life result rests on 10 test people, so it is uncertain. Two smaller studies (nurse stress~\cite{nurse}, ADARP~\cite{adarp}) had only 4 test people each and scored near a coin flip; they are left out here but kept in the code repository.
-\item Each person's normal is computed from their whole recording; a real app would build it from past data only.
-\item ZU-PWD has only one-minute summaries and no stress labels, so the final model could not be tested on our own data.
+\item \textbf{Small test groups.} The daily-life result rests on 10 test people and the driving result on 9, so both are uncertain. Two smaller studies (nurse stress~\cite{nurse}, ADARP~\cite{adarp}) had only 4 test people each and scored near a coin flip; they are left out here but kept in the code repository.
+\item \textbf{Lab timing.} In every lab study stress comes at the same point in the session, and a model given only the clock scores 0.78--0.97. BodySync never sees the clock, but lab data alone cannot rule out that it partly tracks time; the driving test, where time scores 0.50, is the main evidence against this.
+\item \textbf{Everyday life.} Everyday stress is milder and rated only a few times a day. In CAN-STRESS the calm ratings cluster in the evening, so time of day may explain part of the gain from 0.59 to 0.67.
+\item \textbf{The normal uses the whole recording.} Each person's normal is computed from all of their data, including later days; a real app would only have the past. A past-only normal was tried and did not help on the development people.
+\item \textbf{Coarse in time.} BodySync tells stressful stretches from calm ones, but it does not follow moment-to-moment stress: on AffectiveROAD it hardly tracks the drivers' own continuous stress rating (correlation about 0.1).
+\item \textbf{One device family, no own labels.} Every stress dataset used the Empatica E4. Our own dataset, ZU-PWD (EmbracePlus), has only one-minute summaries and no stress labels, so the final model could not be tested on it, or on any other wristband.
+\item \textbf{Self-training is a small, uneven gain.} It adds about 0.02 on average, mostly on real driving (0.08); on the lab studies it adds almost nothing.
 \end{itemize}
 
 Code and all results: \url{https://github.com/swaylakh/bodysync}
